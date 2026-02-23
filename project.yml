@@ -1,0 +1,23 @@
+name: IronFive
+options:
+  bundleIdPrefix: com.antigravity
+targets:
+  IronFive:
+    type: application.watchapp2
+    platform: watchOS
+    sources: [IronFive]
+    deploymentTarget: "10.0"
+    entitlements:
+      com.apple.developer.healthkit: YES
+      com.apple.developer.healthkit.background-delivery: YES
+    settings:
+      base:
+        INFOPLIST_KEY_CFBundleDisplayName: IronFive
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_WKCompanionAppBundleIdentifier: com.antigravity.IronFiveCompanion
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: 5.0
+        DEVELOPMENT_TEAM: "" # Let user select
+        INFOPLIST_KEY_NSHealthUpdateUsageDescription: IronFive needs permission to log your workouts to Apple Health.
+        INFOPLIST_KEY_NSHealthShareUsageDescription: IronFive needs permission to read your heart rate and active energy during workouts.
+        INFOPLIST_KEY_UIBackgroundModes: "workout-processing"
