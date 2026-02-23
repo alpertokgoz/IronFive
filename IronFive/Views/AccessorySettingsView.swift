@@ -4,15 +4,15 @@ import SwiftData
 struct AccessorySettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var accessories: [AccessoryExercise]
-    
+
     @State private var showingAddSheet = false
-    
+
     var body: some View {
         List {
             ForEach(MainLift.allCases, id: \.self) { lift in
                 Section(header: Text("\(lift.name) Day Accessories")) {
                     let liftAccessories = accessories.filter { $0.relatedLift == lift }
-                    
+
                     if liftAccessories.isEmpty {
                         Text("No accessories added.")
                             .foregroundColor(.secondary)
@@ -47,7 +47,7 @@ struct AccessorySettingsView: View {
             AddAccessoryView()
         }
     }
-    
+
     private func deleteAccessories(at offsets: IndexSet, from list: [AccessoryExercise]) {
         for index in offsets {
             let accessory = list[index]

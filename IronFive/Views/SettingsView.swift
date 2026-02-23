@@ -4,13 +4,13 @@ import SwiftData
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var userProfiles: [UserProfile]
-    
+
     @State private var squat1RM: String = ""
     @State private var bench1RM: String = ""
     @State private var deadlift1RM: String = ""
     @State private var ohp1RM: String = ""
     @State private var trainingMax: String = "90"
-    
+
     var body: some View {
         Form {
             Section(header: Text("1 Rep Maxes (lbs/kg)")) {
@@ -43,7 +43,7 @@ struct SettingsView: View {
                         .multilineTextAlignment(.trailing)
                 }
             }
-            
+
             Section(header: Text("Program Settings")) {
                 HStack {
                     Text("Training Max %")
@@ -53,7 +53,7 @@ struct SettingsView: View {
                         .multilineTextAlignment(.trailing)
                 }
             }
-            
+
             Section(header: Text("Accessories")) {
                 NavigationLink("Manage Accessories", destination: AccessorySettingsView())
             }
@@ -66,7 +66,7 @@ struct SettingsView: View {
             saveProfile()
         }
     }
-    
+
     private func loadProfile() {
         guard let profile = userProfiles.first else { return }
         squat1RM = String(format: "%.1f", profile.squat1RM)
@@ -75,7 +75,7 @@ struct SettingsView: View {
         ohp1RM = String(format: "%.1f", profile.ohp1RM)
         trainingMax = String(format: "%.0f", profile.trainingMaxPercentage * 100)
     }
-    
+
     private func saveProfile() {
         if let profile = userProfiles.first {
             profile.squat1RM = Double(squat1RM) ?? 0
@@ -84,7 +84,7 @@ struct SettingsView: View {
             profile.ohp1RM = Double(ohp1RM) ?? 0
             profile.trainingMaxPercentage = (Double(trainingMax) ?? 90) / 100
         }
-        
+
         try? modelContext.save()
     }
 }

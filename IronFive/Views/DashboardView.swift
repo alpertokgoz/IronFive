@@ -7,23 +7,23 @@ struct DashboardView: View {
     @Query(sort: \WorkoutSession.date, order: .reverse) private var workoutSessions: [WorkoutSession]
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var workoutManager: WorkoutManager
-    
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {
                 if let profile = userProfiles.first {
                     Text("Cycle \(profile.currentCycle) - Week \(profile.currentWeek)")
                         .font(.headline)
-                    
+
                     Text("Today's Lift:")
                         .font(.subheadline)
-                    
+
                     let nextLift = determineNextLift()
                     Text(nextLift.name)
                         .font(.title)
                         .fontWeight(.bold)
                         .foregroundStyle(.tint)
-                    
+
                     NavigationLink(destination: WorkoutActiveView(lift: nextLift, profile: profile, accessories: accessories)) {
                         Text("Start Workout")
                             .fontWeight(.medium)
@@ -41,7 +41,7 @@ struct DashboardView: View {
                         .font(.subheadline)
                         .multilineTextAlignment(.center)
                 }
-                
+
                 NavigationLink(destination: SettingsView()) {
                     Label("Settings", systemImage: "gear")
                 }
@@ -55,16 +55,16 @@ struct DashboardView: View {
                 let newProfile = UserProfile()
                 modelContext.insert(newProfile)
             }
-            
+
             workoutManager.requestAuthorization()
         }
     }
-    
+
     private func determineNextLift() -> MainLift {
         guard let lastSession = workoutSessions.first else {
             return .squat
         }
-        
+
         // Progression order: Squat -> Bench -> Deadlift -> OHP -> (Repeat)
         switch lastSession.mainLift {
         case .squat: return .bench

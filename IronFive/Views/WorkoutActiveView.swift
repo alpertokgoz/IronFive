@@ -5,58 +5,58 @@ struct WorkoutActiveView: View {
     let lift: MainLift
     let profile: UserProfile
     let accessories: [AccessoryExercise]
-    
+
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var workoutManager: WorkoutManager
     @Environment(\.dismiss) var dismiss
-    
+
     @State private var selectedTab = 0
     @State private var warmupSets: [WorkoutSet] = []
     @State private var mainSets: [WorkoutSet] = []
     @State private var fslSets: [WorkoutSet] = []
     @State private var accessorySets: [WorkoutSet] = []
-    
+
     // Rest Timer State
     @State private var showRestTimer = false
     @State private var restTimeRemaining = 90
     @State private var timer: Timer?
-    
+
     var body: some View {
         TabView(selection: $selectedTab) {
             // Warmup
             WorkoutPhaseView(title: "Warmup", sets: $warmupSets, selectedTab: $selectedTab, currentTab: 0, nextTab: 1, onRestStart: startRestTimer)
                 .tabItem { Text("Warmup") }
                 .tag(0)
-            
+
             // 5/3/1 Main Work
             WorkoutPhaseView(title: "\(lift.name) - 5/3/1", sets: $mainSets, selectedTab: $selectedTab, currentTab: 1, nextTab: 2, onRestStart: startRestTimer)
                 .tabItem { Text("Main") }
                 .tag(1)
-            
+
             // FSL Supplemental
             WorkoutPhaseView(title: "First Set Last (FSL)", sets: $fslSets, selectedTab: $selectedTab, currentTab: 2, nextTab: 3, onRestStart: startRestTimer)
                 .tabItem { Text("FSL") }
                 .tag(2)
-            
+
             // Accessories
             WorkoutPhaseView(title: "Accessories", sets: $accessorySets, selectedTab: $selectedTab, currentTab: 3, nextTab: 4, onRestStart: startRestTimer)
                 .tabItem { Text("Accessories") }
                 .tag(3)
-            
+
             // Finish
             VStack {
                 Text("Great Job!")
                     .font(.title)
                     .fontWeight(.bold)
-                
+
                 Spacer()
-                
+
                 Button("Finish Workout") {
                     workoutManager.endWorkout()
-                    
+
                     let session = WorkoutSession(mainLift: lift, week: profile.currentWeek, cycle: profile.currentCycle, isCompleted: true)
                     modelContext.insert(session)
-                    
+
                     if lift == .ohp {
                         if profile.currentWeek < 4 {
                             profile.currentWeek += 1
@@ -69,7 +69,7 @@ struct WorkoutActiveView: View {
                             profile.ohp1RM += 5
                         }
                     }
-                    
+
                     try? modelContext.save()
                     dismiss()
                 }
@@ -97,11 +97,11 @@ struct WorkoutActiveView: View {
             }
         }
     }
-    
+
     private func startRestTimer() {
         showRestTimer = true
         restTimeRemaining = 90
-        
+
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             if restTimeRemaining > 0 {
@@ -123,16 +123,16 @@ struct WorkoutPhaseView: View {
     let currentTab: Int
     let nextTab: Int
     var onRestStart: () -> Void
-    
+
     @EnvironmentObject var workoutManager: WorkoutManager
-    
+
     var body: some View {
         VStack {
             Text(title)
                 .font(.title2)
                 .fontWeight(.bold)
                 .padding(.bottom, 8)
-            
+
             if workoutManager.running && currentTab == 0 { // Show only on first page to save space
                 HStack {
                     Image(systemName: "heart.fill").foregroundStyle(.red)
@@ -141,7 +141,7 @@ struct WorkoutPhaseView: View {
                 .font(.caption)
                 .padding(.bottom, 4)
             }
-            
+
             ScrollView {
                 VStack(spacing: 8) {
                     ForEach($sets) { $workoutSet in
@@ -149,9 +149,9 @@ struct WorkoutPhaseView: View {
                     }
                 }
             }
-            
+
             Spacer()
-            
+
             Button("Next") {
                 withAnimation {
                     selectedTab = nextTab
@@ -167,7 +167,7 @@ struct WorkoutPhaseView: View {
 struct SetRowView: View {
     @Binding var workoutSet: WorkoutSet
     var onComplete: () -> Void
-    
+
     var body: some View {
         HStack {
             VStack(alignment: .leading) {
@@ -179,7 +179,7 @@ struct SetRowView: View {
                     .foregroundColor(.secondary)
             }
             Spacer()
-            
+
             Button(action: {
                 // If checking it off, trigger the timer
                 if !workoutSet.isCompleted {
@@ -203,16 +203,16 @@ struct SetRowView: View {
 struct RestTimerView: View {
     @Binding var timeRemaining: Int
     @Binding var isPresented: Bool
-    
+
     var body: some View {
         VStack {
             Text("Rest")
                 .font(.headline)
-            
+
             Text("\(timeRemaining)")
                 .font(.system(size: 60, weight: .bold, design: .rounded))
                 .foregroundColor(.accentColor)
-            
+
             Button("Skip") {
                 isPresented = false
             }
