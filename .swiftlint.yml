@@ -1,0 +1,10 @@
+disabled_rules:
+  - trailing_whitespace
+  - line_length
+opt_in_rules:
+  - empty_count
+  - force_unwrapping
+excluded:
+  - Pods
+  - Carthage
+  - .build
