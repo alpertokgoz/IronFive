@@ -1,7 +1,6 @@
 name: IronFive
 options:
   bundleIdPrefix: com.antigravity
-  xcodeVersion: "15.0"
 targets:
   IronFive:
     type: application.watchapp2
