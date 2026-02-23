@@ -3,6 +3,8 @@ import SwiftData
 
 struct DashboardView: View {
     @Query private var userProfiles: [UserProfile]
+    @Query private var accessories: [AccessoryExercise]
+    @Query(sort: \WorkoutSession.date, order: .reverse) private var workoutSessions: [WorkoutSession]
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var workoutManager: WorkoutManager
     
@@ -16,12 +18,13 @@ struct DashboardView: View {
                     Text("Today's Lift:")
                         .font(.subheadline)
                     
-                    Text(determineNextLift(profile: profile).name)
+                    let nextLift = determineNextLift()
+                    Text(nextLift.name)
                         .font(.title)
                         .fontWeight(.bold)
                         .foregroundStyle(.tint)
                     
-                    NavigationLink(destination: WorkoutActiveView(lift: determineNextLift(profile: profile))) {
+                    NavigationLink(destination: WorkoutActiveView(lift: nextLift, profile: profile, accessories: accessories)) {
                         Text("Start Workout")
                             .fontWeight(.medium)
                             .padding()
@@ -57,8 +60,18 @@ struct DashboardView: View {
         }
     }
     
-    private func determineNextLift(profile: UserProfile) -> MainLift {
-        return .squat
+    private func determineNextLift() -> MainLift {
+        guard let lastSession = workoutSessions.first else {
+            return .squat
+        }
+        
+        // Progression order: Squat -> Bench -> Deadlift -> OHP -> (Repeat)
+        switch lastSession.mainLift {
+        case .squat: return .bench
+        case .bench: return .deadlift
+        case .deadlift: return .ohp
+        case .ohp: return .squat
+        }
     }
 }
 

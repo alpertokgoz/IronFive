@@ -55,7 +55,7 @@ struct SettingsView: View {
             }
             
             Section(header: Text("Accessories")) {
-                NavigationLink("Manage Accessories", destination: Text("Accessories Manager"))
+                NavigationLink("Manage Accessories", destination: AccessorySettingsView())
             }
         }
         .navigationTitle("Settings")
