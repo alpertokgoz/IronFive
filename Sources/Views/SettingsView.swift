@@ -18,28 +18,24 @@ struct SettingsView: View {
                     Text("Squat")
                     Spacer()
                     TextField("0", text: $squat1RM)
-                        .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
                 }
                 HStack {
                     Text("Bench")
                     Spacer()
                     TextField("0", text: $bench1RM)
-                        .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
                 }
                 HStack {
                     Text("Deadlift")
                     Spacer()
                     TextField("0", text: $deadlift1RM)
-                        .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
                 }
                 HStack {
                     Text("OHP")
                     Spacer()
                     TextField("0", text: $ohp1RM)
-                        .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
                 }
             }
@@ -49,7 +45,6 @@ struct SettingsView: View {
                     Text("Training Max %")
                     Spacer()
                     TextField("90", text: $trainingMax)
-                        .keyboardType(.numberPad)
                         .multilineTextAlignment(.trailing)
                 }
             }
