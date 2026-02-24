@@ -10,11 +10,9 @@ targets:
       - path: IronFive
     settings:
       base:
-        PRODUCT_NAME: IronFive
         INFOPLIST_KEY_CFBundleDisplayName: IronFive
         INFOPLIST_KEY_UISupportedInterfaceOrientations:
           [UIInterfaceOrientationPortrait]
-        INFOPLIST_KEY_WKCompanionAppBundleIdentifier: com.antigravity.IronFiveCompanion
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_VERSION: 5.0
         DEVELOPMENT_TEAM: ""
