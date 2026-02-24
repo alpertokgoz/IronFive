@@ -29,5 +29,5 @@ jobs:
           xcodebuild clean build \
             -project IronFive.xcodeproj \
             -scheme IronFive \
-            -destination 'platform=watchOS Simulator,name=Apple Watch Series 10 (46mm),OS=11.2' \
+            -destination 'generic/platform=watchOS Simulator' \
             CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
