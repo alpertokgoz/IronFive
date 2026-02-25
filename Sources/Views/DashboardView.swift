@@ -10,64 +10,64 @@ struct DashboardView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 16) {
+            VStack(spacing: 12) {
                 if let profile = userProfiles.first {
+                    let nextLift = determineNextLift()
+                    
+                    // Main Glanceable Card
                     VStack(spacing: 4) {
                         Text("Cycle \(profile.currentCycle) • Week \(profile.currentWeek)")
-                            .font(.caption)
+                            .font(.caption2)
                             .fontWeight(.bold)
                             .foregroundStyle(.secondary)
                         
-                        Text("Next Lift")
-                            .font(.subheadline)
+                        Text(nextLift.name)
+                            .font(.title2)
+                            .fontWeight(.black)
+                            .foregroundStyle(.primary)
                     }
-
-                    let nextLift = determineNextLift()
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(Color.accentColor.gradient)
-                            .frame(height: 100)
-                        
-                        VStack {
-                            Text(nextLift.name)
-                                .font(.title)
-                                .fontWeight(.black)
-                                .foregroundColor(.white)
-                        }
-                    }
-                    .padding(.horizontal)
-
-                    NavigationLink(destination: WorkoutActiveView(lift: nextLift, profile: profile, accessories: accessories)) {
-                        Text("Start Workout")
-                            .fontWeight(.bold)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.white)
-                            .foregroundColor(.accentColor)
-                            .cornerRadius(12)
-                    }
-                    .padding(.top)
-                } else {
-                    Text("Welcome to IronFive!")
-                        .font(.headline)
-                    Text("Please set up your 1RMs in Settings to begin.")
-                        .font(.subheadline)
-                        .multilineTextAlignment(.center)
-                }
-
-                HStack(spacing: 20) {
-                    NavigationLink(destination: HistoryView()) {
-                        Label("History", systemImage: "clock.arrow.circlepath")
-                    }
+                    .padding(.top, 8)
                     
-                    NavigationLink(destination: SettingsView()) {
-                        Label("Settings", systemImage: "gear")
+                    // Action Button
+                    NavigationLink(destination: WorkoutActiveView(lift: nextLift, profile: profile, accessories: accessories)) {
+                        VStack {
+                            Image(systemName: "play.fill")
+                                .font(.title3)
+                            Text("Start")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.accentColor)
+                    .frame(height: 70)
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    
+                    // Secondary Actions
+                    HStack(spacing: 8) {
+                        NavigationLink(destination: HistoryView()) {
+                            Image(systemName: "clock.arrow.circlepath")
+                        }
+                        .buttonStyle(.bordered)
+                        
+                        NavigationLink(destination: SettingsView()) {
+                            Image(systemName: "gearshape.fill")
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                } else {
+                    Text("IronFive")
+                        .font(.headline)
+                    Text("Setup 1RMs to start")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    NavigationLink("Settings", destination: SettingsView())
                 }
-                .padding(.top)
             }
-            .padding()
-            .navigationTitle("IronFive")
+            .padding(.horizontal)
+            .containerBackground(Color.accentColor.gradient, for: .navigation)
         }
         .onAppear {
             if userProfiles.isEmpty {

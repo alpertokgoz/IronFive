@@ -21,7 +21,8 @@ struct HistoryView: View {
                                     .foregroundColor(.accentColor)
                                 Spacer()
                                 Text("W\(session.week) C\(session.cycle)")
-                                    .font(.caption)
+                                    .font(.caption2)
+                                    .fontWeight(.bold)
                                     .foregroundColor(.secondary)
                             }
                             
@@ -32,17 +33,18 @@ struct HistoryView: View {
                                     Spacer()
                                     VStack(alignment: .trailing) {
                                         Text("Est. 1RM")
-                                            .font(.caption2)
+                                            .font(.system(size: 8))
                                             .foregroundColor(.secondary)
-                                        Text("\(Int(session.estimated1RM)) lbs")
+                                            .textCase(.uppercase)
+                                        Text("\(Int(session.estimated1RM))")
                                             .font(.subheadline)
                                             .fontWeight(.bold)
                                     }
                                 }
-                                .padding(.top, 4)
+                                .padding(.top, 2)
                             } else {
                                 Text("Completed")
-                                    .font(.caption)
+                                    .font(.caption2)
                                     .foregroundColor(.green)
                             }
                         }
@@ -52,6 +54,7 @@ struct HistoryView: View {
             }
         }
         .navigationTitle("History")
+        .containerBackground(Color.accentColor.gradient, for: .navigation)
     }
 
     private func deleteSession(at offsets: IndexSet) {

@@ -13,47 +13,53 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section(header: Text("1 Rep Maxes (lbs/kg)")) {
+            Section(header: Text("1 Rep Maxes")) {
                 HStack {
                     Text("Squat")
                     Spacer()
                     TextField("0", text: $squat1RM)
                         .multilineTextAlignment(.trailing)
+                        .foregroundColor(.accentColor)
                 }
                 HStack {
                     Text("Bench")
                     Spacer()
                     TextField("0", text: $bench1RM)
                         .multilineTextAlignment(.trailing)
+                        .foregroundColor(.accentColor)
                 }
                 HStack {
                     Text("Deadlift")
                     Spacer()
                     TextField("0", text: $deadlift1RM)
                         .multilineTextAlignment(.trailing)
+                        .foregroundColor(.accentColor)
                 }
                 HStack {
                     Text("OHP")
                     Spacer()
                     TextField("0", text: $ohp1RM)
                         .multilineTextAlignment(.trailing)
+                        .foregroundColor(.accentColor)
                 }
             }
 
             Section(header: Text("Program Settings")) {
                 HStack {
-                    Text("Training Max %")
+                    Text("TM %")
                     Spacer()
                     TextField("90", text: $trainingMax)
                         .multilineTextAlignment(.trailing)
+                        .foregroundColor(.accentColor)
                 }
             }
 
-            Section(header: Text("Accessories")) {
+            Section {
                 NavigationLink("Manage Accessories", destination: AccessorySettingsView())
             }
         }
         .navigationTitle("Settings")
+        .containerBackground(Color.gray.gradient, for: .navigation)
         .onAppear {
             loadProfile()
         }

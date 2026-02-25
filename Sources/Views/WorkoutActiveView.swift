@@ -98,6 +98,7 @@ struct WorkoutActiveView: View {
         .tabViewStyle(.page)
         .navigationTitle(lift.name)
         .navigationBarTitleDisplayMode(.inline)
+        .containerBackground(liftColor(lift).gradient, for: .navigation)
         .onAppear {
             let sets = WorkoutCalculator.generateWorkout(for: lift, profile: profile, accessories: accessories)
             warmupSets = sets.warmup
@@ -129,16 +130,29 @@ struct WorkoutActiveView: View {
     private func startRestTimer() {
         showRestTimer = true
         restTimeRemaining = 90
+        WKInterfaceDevice.current().play(.start)
 
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             if restTimeRemaining > 0 {
                 restTimeRemaining -= 1
+                if restTimeRemaining == 3 || restTimeRemaining == 2 || restTimeRemaining == 1 {
+                    WKInterfaceDevice.current().play(.directionUp)
+                }
             } else {
                 showRestTimer = false
                 timer?.invalidate()
                 WKInterfaceDevice.current().play(.success)
             }
+        }
+    }
+
+    private func liftColor(_ lift: MainLift) -> Color {
+        switch lift {
+        case .squat: return .orange
+        case .bench: return .blue
+        case .deadlift: return .green
+        case .ohp: return .purple
         }
     }
 }
@@ -197,58 +211,87 @@ struct SetRowView: View {
     @Binding var workoutSet: WorkoutSet
     var onComplete: () -> Void
     var onPlateCalc: () -> Void
+    
+    @FocusState private var isRepFieldFocused: Bool
 
     var body: some View {
         HStack {
-            VStack(alignment: .leading) {
+            VStack(alignment: .leading, spacing: 2) {
                 Button(action: onPlateCalc) {
                     Text("\(String(format: "%.1f", workoutSet.weight)) lbs")
-                        .font(.title3)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.tint)
+                        .font(.headline)
+                        .fontWeight(.black)
+                        .foregroundStyle(.primary)
                 }
                 .buttonStyle(.plain)
                 
                 if workoutSet.reps.contains("+") {
-                    HStack {
-                        Text("Actual:")
-                        TextField("Reps", value: $workoutSet.actualReps, format: .number)
-                            .multilineTextAlignment(.center)
-                            .frame(width: 44)
-                            .background(Color.accentColor.opacity(0.2))
-                            .cornerRadius(4)
+                    HStack(spacing: 4) {
+                        Text("Reps:")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        
+                        Text("\(workoutSet.actualReps)")
+                            .font(.body)
+                            .fontWeight(.bold)
+                            .foregroundStyle(.accent)
+                            .focusable()
+                            .focused($isRepFieldFocused)
+                            .digitalCrownRotation($workoutSet.actualReps.toDouble(), from: 0, through: 50, by: 1, sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
                     }
-                    .font(.subheadline)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(isRepFieldFocused ? Color.accentColor.opacity(0.3) : Color.white.opacity(0.1))
+                    .cornerRadius(8)
                 } else {
                     Text("\(workoutSet.reps) Reps")
-                        .font(.subheadline)
+                        .font(.caption)
+                        .fontWeight(.medium)
                         .foregroundColor(.secondary)
                 }
             }
             Spacer()
 
             Button(action: {
-                // If checking it off, trigger the timer
                 if !workoutSet.isCompleted {
-                    // Set default actual reps for AMRAP if not set
                     if workoutSet.reps.contains("+") && workoutSet.actualReps == 0 {
                         let target = Int(workoutSet.reps.replacingOccurrences(of: "+", with: "")) ?? 0
                         workoutSet.actualReps = target
                     }
+                    WKInterfaceDevice.current().play(.click)
                     onComplete()
                 }
                 workoutSet.isCompleted.toggle()
             }) {
-                Image(systemName: workoutSet.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .resizable()
-                    .frame(width: 32, height: 32)
-                    .foregroundColor(workoutSet.isCompleted ? .green : .gray)
+                ZStack {
+                    Circle()
+                        .fill(workoutSet.isCompleted ? Color.green : Color.white.opacity(0.1))
+                        .frame(width: 44, height: 44)
+                    
+                    Image(systemName: workoutSet.isCompleted ? "checkmark" : "circle")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(workoutSet.isCompleted ? .black : .white.opacity(0.3))
+                }
             }
             .buttonStyle(.plain)
         }
         .padding()
-        .background(Color.secondary.opacity(0.1))
-        .cornerRadius(12)
+        .background(Material.thinMaterial)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(workoutSet.isCompleted ? Color.green.opacity(0.5) : Color.white.opacity(0.1), lineWidth: 1)
+        )
+    }
+}
+
+// Helper for Digital Crown with Int
+extension Binding where Value == Int {
+    func toDouble() -> Binding<Double> {
+        return Binding<Double>(
+            get: { Double(self.wrappedValue) },
+            set: { self.wrappedValue = Int($0) }
+        )
     }
 }
 
