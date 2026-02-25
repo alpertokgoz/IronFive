@@ -12,26 +12,39 @@ struct DashboardView: View {
         NavigationStack {
             VStack(spacing: 16) {
                 if let profile = userProfiles.first {
-                    Text("Cycle \(profile.currentCycle) - Week \(profile.currentWeek)")
-                        .font(.headline)
-
-                    Text("Today's Lift:")
-                        .font(.subheadline)
+                    VStack(spacing: 4) {
+                        Text("Cycle \(profile.currentCycle) • Week \(profile.currentWeek)")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundStyle(.secondary)
+                        
+                        Text("Next Lift")
+                            .font(.subheadline)
+                    }
 
                     let nextLift = determineNextLift()
-                    Text(nextLift.name)
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.tint)
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(Color.accentColor.gradient)
+                            .frame(height: 100)
+                        
+                        VStack {
+                            Text(nextLift.name)
+                                .font(.title)
+                                .fontWeight(.black)
+                                .foregroundColor(.white)
+                        }
+                    }
+                    .padding(.horizontal)
 
                     NavigationLink(destination: WorkoutActiveView(lift: nextLift, profile: profile, accessories: accessories)) {
                         Text("Start Workout")
-                            .fontWeight(.medium)
+                            .fontWeight(.bold)
                             .padding()
                             .frame(maxWidth: .infinity)
-                            .background(Color.accentColor)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
+                            .background(Color.white)
+                            .foregroundColor(.accentColor)
+                            .cornerRadius(12)
                     }
                     .padding(.top)
                 } else {

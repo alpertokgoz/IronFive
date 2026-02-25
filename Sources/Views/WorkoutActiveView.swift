@@ -20,26 +20,29 @@ struct WorkoutActiveView: View {
     @State private var showRestTimer = false
     @State private var restTimeRemaining = 90
     @State private var timer: Timer?
+    
+    // Plate Calculator State
+    @State private var selectedWeightForCalc: Double?
 
     var body: some View {
         TabView(selection: $selectedTab) {
             // Warmup
-            WorkoutPhaseView(title: "Warmup", sets: $warmupSets, selectedTab: $selectedTab, currentTab: 0, nextTab: 1, onRestStart: startRestTimer)
+            WorkoutPhaseView(title: "Warmup", sets: $warmupSets, selectedTab: $selectedTab, currentTab: 0, nextTab: 1, onRestStart: startRestTimer, onPlateCalc: { weight in selectedWeightForCalc = weight })
                 .tabItem { Text("Warmup") }
                 .tag(0)
 
             // 5/3/1 Main Work
-            WorkoutPhaseView(title: "\(lift.name) - 5/3/1", sets: $mainSets, selectedTab: $selectedTab, currentTab: 1, nextTab: 2, onRestStart: startRestTimer)
+            WorkoutPhaseView(title: "Main Lift", sets: $mainSets, selectedTab: $selectedTab, currentTab: 1, nextTab: 2, onRestStart: startRestTimer, onPlateCalc: { weight in selectedWeightForCalc = weight })
                 .tabItem { Text("Main") }
                 .tag(1)
 
             // FSL Supplemental
-            WorkoutPhaseView(title: "First Set Last (FSL)", sets: $fslSets, selectedTab: $selectedTab, currentTab: 2, nextTab: 3, onRestStart: startRestTimer)
+            WorkoutPhaseView(title: "FSL", sets: $fslSets, selectedTab: $selectedTab, currentTab: 2, nextTab: 3, onRestStart: startRestTimer, onPlateCalc: { weight in selectedWeightForCalc = weight })
                 .tabItem { Text("FSL") }
                 .tag(2)
 
             // Accessories
-            WorkoutPhaseView(title: "Accessories", sets: $accessorySets, selectedTab: $selectedTab, currentTab: 3, nextTab: 4, onRestStart: startRestTimer)
+            WorkoutPhaseView(title: "Accessories", sets: $accessorySets, selectedTab: $selectedTab, currentTab: 3, nextTab: 4, onRestStart: startRestTimer, onPlateCalc: { _ in })
                 .tabItem { Text("Accessories") }
                 .tag(3)
 
@@ -106,8 +109,21 @@ struct WorkoutActiveView: View {
         .overlay {
             if showRestTimer {
                 RestTimerView(timeRemaining: $restTimeRemaining, isPresented: $showRestTimer)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .sheet(item: Binding(
+            get: { selectedWeightForCalc.map { WeightIdentifiable(weight: $0) } },
+            set: { selectedWeightForCalc = $0?.weight }
+        )) { item in
+            PlateCalculatorView(targetWeight: item.weight)
+        }
+        .animation(.spring(), value: showRestTimer)
+    }
+    
+    struct WeightIdentifiable: Identifiable {
+        let id = UUID()
+        let weight: Double
     }
 
     private func startRestTimer() {
@@ -135,6 +151,7 @@ struct WorkoutPhaseView: View {
     let currentTab: Int
     let nextTab: Int
     var onRestStart: () -> Void
+    var onPlateCalc: (Double) -> Void
 
     @EnvironmentObject var workoutManager: WorkoutManager
 
@@ -157,7 +174,7 @@ struct WorkoutPhaseView: View {
             ScrollView {
                 VStack(spacing: 8) {
                     ForEach($sets) { $workoutSet in
-                        SetRowView(workoutSet: $workoutSet, onComplete: onRestStart)
+                        SetRowView(workoutSet: $workoutSet, onComplete: onRestStart, onPlateCalc: { onPlateCalc(workoutSet.weight) })
                     }
                 }
             }
@@ -179,13 +196,18 @@ struct WorkoutPhaseView: View {
 struct SetRowView: View {
     @Binding var workoutSet: WorkoutSet
     var onComplete: () -> Void
+    var onPlateCalc: () -> Void
 
     var body: some View {
         HStack {
             VStack(alignment: .leading) {
-                Text("\(String(format: "%.1f", workoutSet.weight)) lbs")
-                    .font(.title3)
-                    .fontWeight(.bold)
+                Button(action: onPlateCalc) {
+                    Text("\(String(format: "%.1f", workoutSet.weight)) lbs")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.tint)
+                }
+                .buttonStyle(.plain)
                 
                 if workoutSet.reps.contains("+") {
                     HStack {
@@ -238,10 +260,21 @@ struct RestTimerView: View {
         VStack {
             Text("Rest")
                 .font(.headline)
-
-            Text("\(timeRemaining)")
-                .font(.system(size: 60, weight: .bold, design: .rounded))
-                .foregroundColor(.accentColor)
+            
+            ZStack {
+                Circle()
+                    .stroke(Color.secondary.opacity(0.2), lineWidth: 8)
+                Circle()
+                    .trim(from: 0, to: Double(timeRemaining) / 90.0)
+                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .animation(.linear, value: timeRemaining)
+                
+                Text("\(timeRemaining)")
+                    .font(.system(size: 40, weight: .bold, design: .rounded))
+            }
+            .frame(width: 100, height: 100)
+            .padding()
 
             Button("Skip") {
                 isPresented = false
