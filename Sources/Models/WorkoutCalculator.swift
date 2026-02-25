@@ -35,15 +35,15 @@ struct WorkoutCalculator {
         }
     }
 
-    static func generateWorkout(for lift: MainLift, profile: UserProfile, accessories: [AccessoryExercise]) -> (warmup: [WorkoutSet], main: [WorkoutSet], fsl: [WorkoutSet], accessorySets: [WorkoutSet]) {
+    static func generateWorkout(for lift: MainLift, profile: UserProfile, accessories: [AccessoryExercise]) -> (warmup: [WorkoutSet], main: [WorkoutSet], supplemental: [WorkoutSet], accessorySets: [WorkoutSet]) {
         let oneRepMax = get1RM(for: lift, from: profile)
         let tm = oneRepMax * profile.trainingMaxPercentage
         let week = profile.currentWeek
 
         let warmup = [
-            WorkoutSet(weight: calculateWeight(tm * 0.40), reps: "5", type: .warmup),
-            WorkoutSet(weight: calculateWeight(tm * 0.50), reps: "5", type: .warmup),
-            WorkoutSet(weight: calculateWeight(tm * 0.60), reps: "3", type: .warmup)
+            WorkoutSet(weight: calculatedWeight(tm * 0.40), reps: "5", type: .warmup),
+            WorkoutSet(weight: calculatedWeight(tm * 0.50), reps: "5", type: .warmup),
+            WorkoutSet(weight: calculatedWeight(tm * 0.60), reps: "3", type: .warmup)
         ]
 
         var main: [WorkoutSet] = []
@@ -53,42 +53,70 @@ struct WorkoutCalculator {
         case 1: // 5s week
             fslPercentage = 0.65
             main = [
-                WorkoutSet(weight: calculateWeight(tm * 0.65), reps: "5", type: .main),
-                WorkoutSet(weight: calculateWeight(tm * 0.75), reps: "5", type: .main),
-                WorkoutSet(weight: calculateWeight(tm * 0.85), reps: "5+", type: .main)
+                WorkoutSet(weight: calculatedWeight(tm * 0.65), reps: "5", type: .main),
+                WorkoutSet(weight: calculatedWeight(tm * 0.75), reps: "5", type: .main),
+                WorkoutSet(weight: calculatedWeight(tm * 0.85), reps: "5+", type: .main)
             ]
         case 2: // 3s week
             fslPercentage = 0.70
             main = [
-                WorkoutSet(weight: calculateWeight(tm * 0.70), reps: "3", type: .main),
-                WorkoutSet(weight: calculateWeight(tm * 0.80), reps: "3", type: .main),
-                WorkoutSet(weight: calculateWeight(tm * 0.90), reps: "3+", type: .main)
+                WorkoutSet(weight: calculatedWeight(tm * 0.70), reps: "3", type: .main),
+                WorkoutSet(weight: calculatedWeight(tm * 0.80), reps: "3", type: .main),
+                WorkoutSet(weight: calculatedWeight(tm * 0.90), reps: "3+", type: .main)
             ]
         case 3: // 5/3/1 week
             fslPercentage = 0.75
             main = [
-                WorkoutSet(weight: calculateWeight(tm * 0.75), reps: "5", type: .main),
-                WorkoutSet(weight: calculateWeight(tm * 0.85), reps: "3", type: .main),
-                WorkoutSet(weight: calculateWeight(tm * 0.95), reps: "1+", type: .main)
+                WorkoutSet(weight: calculatedWeight(tm * 0.75), reps: "5", type: .main),
+                WorkoutSet(weight: calculatedWeight(tm * 0.85), reps: "3", type: .main),
+                WorkoutSet(weight: calculatedWeight(tm * 0.95), reps: "1+", type: .main)
             ]
         case 4: // Deload week
             fslPercentage = 0.40
             main = [
-                WorkoutSet(weight: calculateWeight(tm * 0.40), reps: "5", type: .main),
-                WorkoutSet(weight: calculateWeight(tm * 0.50), reps: "5", type: .main),
-                WorkoutSet(weight: calculateWeight(tm * 0.60), reps: "5", type: .main)
+                WorkoutSet(weight: calculatedWeight(tm * 0.40), reps: "5", type: .main),
+                WorkoutSet(weight: calculatedWeight(tm * 0.50), reps: "5", type: .main),
+                WorkoutSet(weight: calculatedWeight(tm * 0.60), reps: "5", type: .main)
             ]
         default:
             fslPercentage = 0.65
             main = [
-                WorkoutSet(weight: calculateWeight(tm * 0.65), reps: "5", type: .main)
+                WorkoutSet(weight: calculatedWeight(tm * 0.65), reps: "5", type: .main)
             ]
         }
 
-        var fsl: [WorkoutSet] = []
-        if week != 4 { // typically no FSL on deload
-            for _ in 0..<5 {
-                fsl.append(WorkoutSet(weight: calculateWeight(tm * fslPercentage), reps: "5", type: .supplemental))
+        let fslWeight: Double = calculatedWeight(tm * fslPercentage)
+        var sslWeight: Double = 0
+        
+        // Calculate SSL weight (from main set 2)
+        switch week {
+        case 1: sslWeight = calculatedWeight(tm * 0.75)
+        case 2: sslWeight = calculatedWeight(tm * 0.80)
+        case 3: sslWeight = calculatedWeight(tm * 0.85)
+        default: sslWeight = fslWeight
+        }
+
+        var supplemental: [WorkoutSet] = []
+        if week != 4 { // typically no supplemental on deload
+            switch profile.selectedTemplate {
+            case .fsl:
+                for _ in 0..<5 {
+                    supplemental.append(WorkoutSet(weight: fslWeight, reps: "5", type: .supplemental))
+                }
+            case .bbb:
+                for _ in 0..<5 {
+                    supplemental.append(WorkoutSet(weight: calculatedWeight(tm * 0.50), reps: "10", type: .supplemental))
+                }
+            case .ssl:
+                for _ in 0..<5 {
+                    supplemental.append(WorkoutSet(weight: sslWeight, reps: "5", type: .supplemental))
+                }
+            case .bbs:
+                for _ in 0..<10 {
+                    supplemental.append(WorkoutSet(weight: fslWeight, reps: "5", type: .supplemental))
+                }
+            case .widowmaker:
+                supplemental.append(WorkoutSet(weight: fslWeight, reps: "20", type: .supplemental))
             }
         }
 
@@ -101,11 +129,11 @@ struct WorkoutCalculator {
             }
         }
 
-        return (warmup, main, fsl, accessorySets)
+        return (warmup, main, supplemental, accessorySets)
     }
 
-    // Round to nearest 5 (standard plate math, assumes 2.5 plates exist)
-    static func calculateWeight(_ exactWeight: Double) -> Double {
+    // Round to nearest 5 (standard plate math)
+    static func calculatedWeight(_ exactWeight: Double) -> Double {
         return round(exactWeight / 5.0) * 5.0
     }
 }

@@ -11,8 +11,14 @@ final class UserProfile {
 
     var currentCycle: Int
     var currentWeek: Int // 1 (5s), 2 (3s), 3 (5/3/1), 4 (Deload)
+    var selectedTemplateValue: Int // Raw value for SupplementalTemplate
 
-    init(squat1RM: Double = 0, bench1RM: Double = 0, deadlift1RM: Double = 0, ohp1RM: Double = 0, trainingMaxPercentage: Double = 0.90, currentCycle: Int = 1, currentWeek: Int = 1) {
+    var selectedTemplate: SupplementalTemplate {
+        get { SupplementalTemplate(rawValue: selectedTemplateValue) ?? .fsl }
+        set { selectedTemplateValue = newValue.rawValue }
+    }
+
+    init(squat1RM: Double = 0, bench1RM: Double = 0, deadlift1RM: Double = 0, ohp1RM: Double = 0, trainingMaxPercentage: Double = 0.90, currentCycle: Int = 1, currentWeek: Int = 1, selectedTemplate: SupplementalTemplate = .fsl) {
         self.squat1RM = squat1RM
         self.bench1RM = bench1RM
         self.deadlift1RM = deadlift1RM
@@ -20,6 +26,35 @@ final class UserProfile {
         self.trainingMaxPercentage = trainingMaxPercentage
         self.currentCycle = currentCycle
         self.currentWeek = currentWeek
+        self.selectedTemplateValue = selectedTemplate.rawValue
+    }
+}
+
+enum SupplementalTemplate: Int, Codable, CaseIterable {
+    case fsl = 0
+    case bbb = 1
+    case ssl = 2
+    case bbs = 3
+    case widowmaker = 4
+
+    var name: String {
+        switch self {
+        case .fsl: return "FSL (First Set Last)"
+        case .bbb: return "BBB (Boring But Big)"
+        case .ssl: return "SSL (Second Set Last)"
+        case .bbs: return "BBS (Boring But Strong)"
+        case .widowmaker: return "Widowmaker"
+        }
+    }
+    
+    var shortName: String {
+        switch self {
+        case .fsl: return "FSL"
+        case .bbb: return "BBB"
+        case .ssl: return "SSL"
+        case .bbs: return "BBS"
+        case .widowmaker: return "Widow"
+        }
     }
 }
 

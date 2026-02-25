@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var deadlift1RM: String = ""
     @State private var ohp1RM: String = ""
     @State private var trainingMax: String = "90"
+    @State private var selectedTemplate: SupplementalTemplate = .fsl
 
     var body: some View {
         Form {
@@ -52,6 +53,12 @@ struct SettingsView: View {
                         .multilineTextAlignment(.trailing)
                         .foregroundColor(.accentColor)
                 }
+                
+                Picker("Template", selection: $selectedTemplate) {
+                    ForEach(SupplementalTemplate.allCases, id: \.self) { template in
+                        Text(template.name).tag(template)
+                    }
+                }
             }
 
             Section {
@@ -75,6 +82,7 @@ struct SettingsView: View {
         deadlift1RM = String(format: "%.1f", profile.deadlift1RM)
         ohp1RM = String(format: "%.1f", profile.ohp1RM)
         trainingMax = String(format: "%.0f", profile.trainingMaxPercentage * 100)
+        selectedTemplate = profile.selectedTemplate
     }
 
     private func saveProfile() {
@@ -84,6 +92,7 @@ struct SettingsView: View {
             profile.deadlift1RM = Double(deadlift1RM) ?? 0
             profile.ohp1RM = Double(ohp1RM) ?? 0
             profile.trainingMaxPercentage = (Double(trainingMax) ?? 90) / 100
+            profile.selectedTemplate = selectedTemplate
         }
 
         try? modelContext.save()

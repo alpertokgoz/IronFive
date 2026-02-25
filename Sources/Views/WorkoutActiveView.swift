@@ -36,9 +36,9 @@ struct WorkoutActiveView: View {
                 .tabItem { Text("Main") }
                 .tag(1)
 
-            // FSL Supplemental
-            WorkoutPhaseView(title: "FSL", sets: $fslSets, selectedTab: $selectedTab, currentTab: 2, nextTab: 3, onRestStart: startRestTimer, onPlateCalc: { weight in selectedWeightForCalc = weight })
-                .tabItem { Text("FSL") }
+            // Supplemental
+            WorkoutPhaseView(title: profile.selectedTemplate.shortName, sets: $fslSets, selectedTab: $selectedTab, currentTab: 2, nextTab: 3, onRestStart: startRestTimer, onPlateCalc: { weight in selectedWeightForCalc = weight })
+                .tabItem { Text(profile.selectedTemplate.shortName) }
                 .tag(2)
 
             // Accessories
