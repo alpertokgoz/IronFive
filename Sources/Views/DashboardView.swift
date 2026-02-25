@@ -42,8 +42,14 @@ struct DashboardView: View {
                         .multilineTextAlignment(.center)
                 }
 
-                NavigationLink(destination: SettingsView()) {
-                    Label("Settings", systemImage: "gear")
+                HStack(spacing: 20) {
+                    NavigationLink(destination: HistoryView()) {
+                        Label("History", systemImage: "clock.arrow.circlepath")
+                    }
+                    
+                    NavigationLink(destination: SettingsView()) {
+                        Label("Settings", systemImage: "gear")
+                    }
                 }
                 .padding(.top)
             }

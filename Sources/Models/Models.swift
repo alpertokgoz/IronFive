@@ -66,17 +66,29 @@ final class WorkoutSession {
     var week: Int
     var cycle: Int
     var isCompleted: Bool
+    
+    // New fields for AMRAP tracking
+    var amrapReps: Int
+    var amrapWeight: Double
 
     var mainLift: MainLift {
         get { MainLift(rawValue: mainLiftValue) ?? .squat }
         set { mainLiftValue = newValue.rawValue }
     }
 
-    init(date: Date = Date(), mainLift: MainLift, week: Int, cycle: Int, isCompleted: Bool = false) {
+    init(date: Date = Date(), mainLift: MainLift, week: Int, cycle: Int, isCompleted: Bool = false, amrapReps: Int = 0, amrapWeight: Double = 0) {
         self.date = date
         self.mainLiftValue = mainLift.rawValue
         self.week = week
         self.cycle = cycle
         self.isCompleted = isCompleted
+        self.amrapReps = amrapReps
+        self.amrapWeight = amrapWeight
+    }
+    
+    var estimated1RM: Double {
+        guard amrapReps > 0 else { return 0 }
+        // Epley Formula: Weight * (1 + 0.0333 * Reps)
+        return amrapWeight * (1.0 + (Double(amrapReps) * 0.0333))
     }
 }

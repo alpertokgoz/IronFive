@@ -5,6 +5,7 @@ struct WorkoutSet: Identifiable, Hashable {
     let weight: Double
     let reps: String
     let type: SetType
+    var actualReps: Int // Logged reps for AMRAP
     var isCompleted: Bool = false
 
     enum SetType {
@@ -12,6 +13,14 @@ struct WorkoutSet: Identifiable, Hashable {
         case main
         case supplemental // FSL
         case accessory
+    }
+
+    init(weight: Double, reps: String, type: SetType, actualReps: Int = 0, isCompleted: Bool = false) {
+        self.weight = weight
+        self.reps = reps
+        self.type = type
+        self.actualReps = actualReps
+        self.isCompleted = isCompleted
     }
 }
 

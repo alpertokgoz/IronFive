@@ -54,7 +54,19 @@ struct WorkoutActiveView: View {
                 Button("Finish Workout") {
                     workoutManager.endWorkout()
 
-                    let session = WorkoutSession(mainLift: lift, week: profile.currentWeek, cycle: profile.currentCycle, isCompleted: true)
+                    // Find the AMRAP set if it exists and was completed
+                    let amrapSet = mainSets.last { $0.reps.contains("+") && $0.isCompleted }
+                    let actualReps = amrapSet?.actualReps ?? 0
+                    let weight = amrapSet?.weight ?? 0
+
+                    let session = WorkoutSession(
+                        mainLift: lift,
+                        week: profile.currentWeek,
+                        cycle: profile.currentCycle,
+                        isCompleted: true,
+                        amrapReps: actualReps,
+                        amrapWeight: weight
+                    )
                     modelContext.insert(session)
 
                     if lift == .ohp {
@@ -174,15 +186,33 @@ struct SetRowView: View {
                 Text("\(String(format: "%.1f", workoutSet.weight)) lbs")
                     .font(.title3)
                     .fontWeight(.bold)
-                Text("\(workoutSet.reps) Reps")
+                
+                if workoutSet.reps.contains("+") {
+                    HStack {
+                        Text("Actual:")
+                        TextField("Reps", value: $workoutSet.actualReps, format: .number)
+                            .multilineTextAlignment(.center)
+                            .frame(width: 44)
+                            .background(Color.accentColor.opacity(0.2))
+                            .cornerRadius(4)
+                    }
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                } else {
+                    Text("\(workoutSet.reps) Reps")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
             }
             Spacer()
 
             Button(action: {
                 // If checking it off, trigger the timer
                 if !workoutSet.isCompleted {
+                    // Set default actual reps for AMRAP if not set
+                    if workoutSet.reps.contains("+") && workoutSet.actualReps == 0 {
+                        let target = Int(workoutSet.reps.replacingOccurrences(of: "+", with: "")) ?? 0
+                        workoutSet.actualReps = target
+                    }
                     onComplete()
                 }
                 workoutSet.isCompleted.toggle()
