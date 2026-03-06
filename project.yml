@@ -6,8 +6,7 @@ targets:
     type: application
     platform: watchOS
     deploymentTarget: "10.0"
-    sources:
-      - path: Sources
+    sources: [Sources]
     settings:
       base:
         INFOPLIST_KEY_CFBundleDisplayName: IronFive
@@ -19,7 +18,7 @@ targets:
         INFOPLIST_KEY_NSHealthUpdateUsageDescription: IronFive needs permission to log your workouts to Apple Health.
         INFOPLIST_KEY_NSHealthShareUsageDescription: IronFive needs permission to read your heart rate and active energy during workouts.
         INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp: YES
-        INFOPLIST_KEY_LSWatchOnly: YES
+        INFOPLIST_KEY_WKApplication: YES
         INFOPLIST_KEY_UIBackgroundModes: [workout-processing]
         CODE_SIGN_ENTITLEMENTS: Sources/IronFive.entitlements
         TARGETED_DEVICE_FAMILY: 4
