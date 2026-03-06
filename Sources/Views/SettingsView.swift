@@ -9,7 +9,6 @@ struct SettingsView: View {
     @State private var benchTM: String = ""
     @State private var deadliftTM: String = ""
     @State private var ohpTM: String = ""
-    @State private var trainingMax: String = "90"
     @State private var selectedTemplate: SupplementalTemplate = .fsl
 
     var body: some View {
@@ -47,18 +46,18 @@ struct SettingsView: View {
             .listRowBackground(Color.white.opacity(0.05))
 
             Section(header: Text("Program Settings").font(.footnote).fontWeight(.bold).kerning(1.2)) {
-                HStack {
-                    Text("TM %")
-                    Spacer()
-                    TextField("90", text: $trainingMax)
-                        .multilineTextAlignment(.trailing)
-                        .foregroundColor(.accentColor)
-                }
-                
                 Picker("Template", selection: $selectedTemplate) {
                     ForEach(SupplementalTemplate.allCases, id: \.self) { template in
                         Text(template.name).tag(template)
                     }
+                }
+                
+                HStack {
+                    Image(systemName: "info.circle")
+                        .foregroundColor(.secondary)
+                    Text("TMs auto-increase each cycle")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
                 }
             }
             .listRowBackground(Color.white.opacity(0.05))
@@ -84,7 +83,6 @@ struct SettingsView: View {
         benchTM = String(format: "%.1f", profile.benchTM)
         deadliftTM = String(format: "%.1f", profile.deadliftTM)
         ohpTM = String(format: "%.1f", profile.ohpTM)
-        trainingMax = String(format: "%.0f", profile.trainingMaxPercentage * 100)
         selectedTemplate = profile.selectedTemplate
     }
 
@@ -94,11 +92,14 @@ struct SettingsView: View {
             profile.benchTM = Double(benchTM) ?? 0
             profile.deadliftTM = Double(deadliftTM) ?? 0
             profile.ohpTM = Double(ohpTM) ?? 0
-            profile.trainingMaxPercentage = (Double(trainingMax) ?? 90) / 100
             profile.selectedTemplate = selectedTemplate
         }
 
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            print("Failed to save settings: \(error.localizedDescription)")
+        }
     }
 }
 

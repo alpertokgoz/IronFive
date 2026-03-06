@@ -26,7 +26,7 @@ struct HistoryView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(session.mainLift.name)
                                         .font(.system(.title3, design: .rounded, weight: .black))
-                                        .foregroundColor(liftColor(session.mainLift))
+                                    .foregroundColor(session.mainLift.color)
                                     
                                     Text("Cycle \(session.cycle) • Week \(session.week)")
                                         .font(.system(size: 10, weight: .semibold, design: .rounded))
@@ -81,15 +81,10 @@ struct HistoryView: View {
         for index in offsets {
             modelContext.delete(sessions[index])
         }
-        try? modelContext.save()
-    }
-    
-    private func liftColor(_ lift: MainLift) -> Color {
-        switch lift {
-        case .squat: return .orange
-        case .bench: return .blue
-        case .deadlift: return .green
-        case .ohp: return .purple
+        do {
+            try modelContext.save()
+        } catch {
+            print("Failed to delete session: \(error.localizedDescription)")
         }
     }
 }

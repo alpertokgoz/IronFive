@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import SwiftData
 
 @Model
@@ -70,6 +71,15 @@ enum MainLift: Int, Codable, CaseIterable {
         case .bench: return "Bench Press"
         case .deadlift: return "Deadlift"
         case .ohp: return "Overhead Press"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .squat: return .orange
+        case .bench: return .blue
+        case .deadlift: return .green
+        case .ohp: return .purple
         }
     }
 }

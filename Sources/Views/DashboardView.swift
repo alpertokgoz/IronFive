@@ -43,8 +43,8 @@ struct DashboardView: View {
                     .buttonStyle(.plain)
                     .background(
                         RoundedRectangle(cornerRadius: 32)
-                            .fill(liftColor(nextLift).gradient)
-                            .shadow(color: liftColor(nextLift).opacity(0.4), radius: 8, x: 0, y: 4)
+                            .fill(nextLift.color.gradient)
+                            .shadow(color: nextLift.color.opacity(0.4), radius: 8, x: 0, y: 4)
                     )
                     
                     // Secondary Actions
@@ -80,7 +80,7 @@ struct DashboardView: View {
                         Text("IronFive")
                             .font(.system(.title3, design: .rounded, weight: .black))
                         
-                        Text("Set your 1RMs to begin your journey.")
+                        Text("Set your Training Maxes to begin.")
                             .font(.caption)
                             .multilineTextAlignment(.center)
                             .foregroundColor(.secondary)
@@ -117,16 +117,6 @@ struct DashboardView: View {
         case .deadlift: return .ohp
         case .ohp: return .squat
         }
-    }
-
-    private func liftColor(_ lift: MainLift) -> Color {
-        switch lift {
-        case .squat: return .orange
-        case .bench: return .blue
-        case .deadlift: return .green
-        case .ohp: return .purple
-        }
-    }
 }
 
 #Preview {

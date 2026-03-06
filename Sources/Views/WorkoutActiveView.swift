@@ -23,6 +23,9 @@ struct WorkoutActiveView: View {
     
     // Plate Calculator State
     @State private var selectedWeightForCalc: Double?
+    
+    // Finish Confirmation
+    @State private var showFinishConfirmation = false
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -49,51 +52,28 @@ struct WorkoutActiveView: View {
             // Finish
             VStack {
                 Text("Great Job!")
-                    .font(.title)
-                    .fontWeight(.bold)
+                    .font(.system(.title, design: .rounded, weight: .black))
 
                 Spacer()
 
                 Button("Finish Workout") {
-                    workoutManager.endWorkout()
-
-                    // Find the AMRAP set if it exists and was completed
-                    let amrapSet = mainSets.last { $0.reps.contains("+") && $0.isCompleted }
-                    let actualReps = amrapSet?.actualReps ?? 0
-                    let weight = amrapSet?.weight ?? 0
-
-                    let session = WorkoutSession(
-                        mainLift: lift,
-                        week: profile.currentWeek,
-                        cycle: profile.currentCycle,
-                        isCompleted: true,
-                        amrapReps: actualReps,
-                        amrapWeight: weight
-                    )
-                    modelContext.insert(session)
-
-                    if lift == .ohp {
-                        if profile.currentWeek < 4 {
-                            profile.currentWeek += 1
-                        } else {
-                            profile.currentWeek = 1
-                            profile.currentCycle += 1
-                            profile.squatTM += 10
-                            profile.deadliftTM += 10
-                            profile.benchTM += 5
-                            profile.ohpTM += 5
-                        }
-                    }
-
-                    try? modelContext.save()
-                    dismiss()
+                    showFinishConfirmation = true
                 }
                 .buttonStyle(.borderedProminent)
                 .padding()
+                .accessibilityLabel("Finish and save this workout")
             }
             .padding()
             .tabItem { Text("Finish") }
             .tag(4)
+            .alert("Finish Workout?", isPresented: $showFinishConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Finish", role: .destructive) {
+                    finishWorkout()
+                }
+            } message: {
+                Text("This will save your session and advance your program.")
+            }
         }
         .tabViewStyle(.page)
         .navigationTitle(lift.name)
@@ -106,6 +86,10 @@ struct WorkoutActiveView: View {
             fslSets = sets.fsl
             accessorySets = sets.accessorySets
             workoutManager.startWorkout()
+        }
+        .onDisappear {
+            timer?.invalidate()
+            timer = nil
         }
         .overlay {
             if showRestTimer {
@@ -147,13 +131,51 @@ struct WorkoutActiveView: View {
         }
     }
 
-    private func liftColor(_ lift: MainLift) -> Color {
-        switch lift {
-        case .squat: return .orange
-        case .bench: return .blue
-        case .deadlift: return .green
-        case .ohp: return .purple
+    private func finishWorkout() {
+        workoutManager.endWorkout()
+
+        // Find the AMRAP set if it exists and was completed
+        let amrapSet = mainSets.last { $0.reps.contains("+") && $0.isCompleted }
+        let actualReps = amrapSet?.actualReps ?? 0
+        let weight = amrapSet?.weight ?? 0
+
+        let session = WorkoutSession(
+            mainLift: lift,
+            week: profile.currentWeek,
+            cycle: profile.currentCycle,
+            isCompleted: true,
+            amrapReps: actualReps,
+            amrapWeight: weight
+        )
+        modelContext.insert(session)
+
+        // Advance week after every lift; advance cycle after OHP (4th lift)
+        // The lift order is: Squat → Bench → Deadlift → OHP
+        // OHP is the last lift of a week, so advancing week happens here
+        if lift == .ohp {
+            if profile.currentWeek < 4 {
+                profile.currentWeek += 1
+            } else {
+                profile.currentWeek = 1
+                profile.currentCycle += 1
+                profile.squatTM += 10
+                profile.deadliftTM += 10
+                profile.benchTM += 5
+                profile.ohpTM += 5
+            }
         }
+
+        do {
+            try modelContext.save()
+        } catch {
+            // Log failure — in a future version, surface this to the user
+            print("Failed to save workout: \(error.localizedDescription)")
+        }
+        dismiss()
+    }
+
+    private func liftColor(_ lift: MainLift) -> Color {
+        lift.color
     }
 }
 
@@ -176,13 +198,14 @@ struct WorkoutPhaseView: View {
                 .fontWeight(.bold)
                 .padding(.bottom, 8)
 
-            if workoutManager.running && currentTab == 0 { // Show only on first page to save space
+            if workoutManager.running {
                 HStack {
                     Image(systemName: "heart.fill").foregroundStyle(.red)
                     Text(String(format: "%.0f BPM", workoutManager.heartRate))
                 }
                 .font(.caption)
                 .padding(.bottom, 4)
+                .accessibilityLabel("Heart rate: \(Int(workoutManager.heartRate)) beats per minute")
             }
 
             ScrollView {
@@ -217,12 +240,19 @@ struct SetRowView: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Button(action: onPlateCalc) {
-                    Text("\(String(format: "%.1f", workoutSet.weight)) lbs")
-                        .font(.system(.title2, design: .rounded, weight: .black))
+                if workoutSet.type == .accessory {
+                    // Accessories: show only the rep/name info, no weight
+                    Text(workoutSet.reps)
+                        .font(.system(.headline, design: .rounded, weight: .bold))
                         .foregroundStyle(workoutSet.isCompleted ? .secondary : .primary)
-                }
-                .buttonStyle(.plain)
+                } else {
+                    Button(action: onPlateCalc) {
+                        Text("\(String(format: "%.1f", workoutSet.weight)) lbs")
+                            .font(.system(.title2, design: .rounded, weight: .black))
+                            .foregroundStyle(workoutSet.isCompleted ? .secondary : .primary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(String(format: "%.1f", workoutSet.weight)) pounds. Tap for plate calculator.")
                 
                 if workoutSet.reps.contains("+") {
                     HStack(spacing: 6) {
@@ -246,6 +276,7 @@ struct SetRowView: View {
                         .font(.system(.subheadline, design: .rounded, weight: .bold))
                         .foregroundColor(workoutSet.isCompleted ? .secondary.opacity(0.5) : .secondary)
                 }
+                } // end else (non-accessory)
             }
             Spacer()
 

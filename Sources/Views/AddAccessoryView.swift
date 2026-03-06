@@ -49,7 +49,11 @@ struct AddAccessoryView: View {
                             relatedLift: relatedLift
                         )
                         modelContext.insert(newAccessory)
-                        try? modelContext.save()
+                        do {
+                            try modelContext.save()
+                        } catch {
+                            print("Failed to save accessory: \(error.localizedDescription)")
+                        }
                         dismiss()
                     }
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)

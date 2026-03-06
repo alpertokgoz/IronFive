@@ -53,7 +53,11 @@ struct AccessorySettingsView: View {
             let accessory = list[index]
             modelContext.delete(accessory)
         }
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            print("Failed to delete accessory: \(error.localizedDescription)")
+        }
     }
 }
 
