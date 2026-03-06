@@ -7,6 +7,7 @@ struct DashboardView: View {
     @Query(sort: \WorkoutSession.date, order: .reverse) private var workoutSessions: [WorkoutSession]
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var workoutManager: WorkoutManager
+    @State private var showOnboarding = false
 
     var body: some View {
         NavigationView {
@@ -80,14 +81,16 @@ struct DashboardView: View {
                         Text("IronFive")
                             .font(.system(.title3, design: .rounded, weight: .black))
                         
-                        Text("Set your Training Maxes to begin.")
+                        Text("Your 5/3/1 companion.")
                             .font(.caption)
                             .multilineTextAlignment(.center)
                             .foregroundColor(.secondary)
                         
-                        NavigationLink("Setup Now", destination: SettingsView())
-                            .buttonStyle(.borderedProminent)
-                            .tint(.orange)
+                        Button("Get Started") {
+                            showOnboarding = true
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.orange)
                     }
                     .padding()
                 }
@@ -96,12 +99,13 @@ struct DashboardView: View {
             .containerBackground(Color.black.gradient, for: .navigation)
         }
         .onAppear {
-            if userProfiles.isEmpty {
-                let newProfile = UserProfile()
-                modelContext.insert(newProfile)
-            }
-
             workoutManager.requestAuthorization()
+            if userProfiles.isEmpty {
+                showOnboarding = true
+            }
+        }
+        .fullScreenCover(isPresented: $showOnboarding) {
+            OnboardingView()
         }
     }
 

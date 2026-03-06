@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var deadliftTM: String = ""
     @State private var ohpTM: String = ""
     @State private var selectedTemplate: SupplementalTemplate = .fsl
+    @State private var selectedUnit: WeightUnit = .lbs
 
     var body: some View {
         Form {
@@ -46,6 +47,11 @@ struct SettingsView: View {
             .listRowBackground(Color.white.opacity(0.05))
 
             Section(header: Text("Program Settings").font(.footnote).fontWeight(.bold).kerning(1.2)) {
+                Picker("Unit", selection: $selectedUnit) {
+                    Text("lbs").tag(WeightUnit.lbs)
+                    Text("kg").tag(WeightUnit.kg)
+                }
+                
                 Picker("Template", selection: $selectedTemplate) {
                     ForEach(SupplementalTemplate.allCases, id: \.self) { template in
                         Text(template.name).tag(template)
@@ -84,6 +90,7 @@ struct SettingsView: View {
         deadliftTM = String(format: "%.1f", profile.deadliftTM)
         ohpTM = String(format: "%.1f", profile.ohpTM)
         selectedTemplate = profile.selectedTemplate
+        selectedUnit = profile.weightUnit
     }
 
     private func saveProfile() {
@@ -93,6 +100,7 @@ struct SettingsView: View {
             profile.deadliftTM = Double(deadliftTM) ?? 0
             profile.ohpTM = Double(ohpTM) ?? 0
             profile.selectedTemplate = selectedTemplate
+            profile.weightUnit = selectedUnit
         }
 
         do {

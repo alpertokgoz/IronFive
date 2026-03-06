@@ -1,13 +1,16 @@
 import SwiftUI
+import SwiftData
 
 struct PlateCalculatorView: View {
     let targetWeight: Double
+    var unit: WeightUnit = .lbs
     @Environment(\.dismiss) var dismiss
 
     var platesNeeded: [(weight: Double, count: Int)] {
-        let barWeight = 45.0
-        var remaining = (targetWeight - barWeight) / 2.0
-        let availablePlates = [45.0, 25.0, 10.0, 5.0, 2.5]
+        var remaining = (targetWeight - unit.barWeight) / 2.0
+        let availablePlates: [Double] = unit == .lbs
+            ? [45.0, 25.0, 10.0, 5.0, 2.5]
+            : [25.0, 20.0, 15.0, 10.0, 5.0, 2.5, 1.25]
         var result: [(Double, Int)] = []
 
         for plate in availablePlates {
@@ -27,16 +30,16 @@ struct PlateCalculatorView: View {
                 .padding(.top)
 
             VStack(spacing: 4) {
-                Text("\(String(format: "%.1f", targetWeight)) lbs")
+                Text("\(String(format: "%.1f", targetWeight)) \(unit.label)")
                     .font(.title)
                     .fontWeight(.black)
                     .foregroundStyle(.tint)
-                Text("(per side, 45lb bar)")
+                Text("(per side, \(String(format: "%.0f", unit.barWeight))\(unit.label) bar)")
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
 
-            if targetWeight <= 45 {
+            if targetWeight <= unit.barWeight {
                 Text("Bar only")
                     .font(.system(.body, design: .rounded, weight: .semibold))
                     .foregroundColor(.secondary)
@@ -56,7 +59,7 @@ struct PlateCalculatorView: View {
                                         .frame(width: 28, height: 28)
                                 }
                                 
-                                Text("\(String(format: "%.1f", plate.weight)) lb")
+                                Text("\(String(format: "%.1f", plate.weight)) \(unit.label)")
                                     .font(.system(.title3, design: .rounded, weight: .bold))
                                     .foregroundColor(.white)
                                 
@@ -92,17 +95,30 @@ struct PlateCalculatorView: View {
     }
 
     private func plateColor(_ weight: Double) -> Color {
-        switch weight {
-        case 45: return .blue
-        case 25: return .yellow
-        case 10: return .white
-        case 5: return .red
-        case 2.5: return .green
-        default: return .gray
+        if unit == .kg {
+            switch weight {
+            case 25: return .red
+            case 20: return .blue
+            case 15: return .yellow
+            case 10: return .green
+            case 5: return .white
+            case 2.5: return .orange
+            case 1.25: return .gray
+            default: return .gray
+            }
+        } else {
+            switch weight {
+            case 45: return .blue
+            case 25: return .yellow
+            case 10: return .white
+            case 5: return .red
+            case 2.5: return .green
+            default: return .gray
+            }
         }
     }
 }
 
 #Preview {
-    PlateCalculatorView(targetWeight: 225)
+    PlateCalculatorView(targetWeight: 225, unit: .lbs)
 }

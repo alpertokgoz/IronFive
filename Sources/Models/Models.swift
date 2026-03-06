@@ -12,13 +12,19 @@ final class UserProfile {
     var currentCycle: Int
     var currentWeek: Int // 1 (5s), 2 (3s), 3 (5/3/1), 4 (Deload)
     var selectedTemplateValue: Int // Raw value for SupplementalTemplate
+    var weightUnitValue: Int // Raw value for WeightUnit
 
     var selectedTemplate: SupplementalTemplate {
         get { SupplementalTemplate(rawValue: selectedTemplateValue) ?? .fsl }
         set { selectedTemplateValue = newValue.rawValue }
     }
 
-    init(squatTM: Double = 0, benchTM: Double = 0, deadliftTM: Double = 0, ohpTM: Double = 0, currentCycle: Int = 1, currentWeek: Int = 1, selectedTemplate: SupplementalTemplate = .fsl) {
+    var weightUnit: WeightUnit {
+        get { WeightUnit(rawValue: weightUnitValue) ?? .lbs }
+        set { weightUnitValue = newValue.rawValue }
+    }
+
+    init(squatTM: Double = 0, benchTM: Double = 0, deadliftTM: Double = 0, ohpTM: Double = 0, currentCycle: Int = 1, currentWeek: Int = 1, selectedTemplate: SupplementalTemplate = .fsl, weightUnit: WeightUnit = .lbs) {
         self.squatTM = squatTM
         self.benchTM = benchTM
         self.deadliftTM = deadliftTM
@@ -26,6 +32,49 @@ final class UserProfile {
         self.currentCycle = currentCycle
         self.currentWeek = currentWeek
         self.selectedTemplateValue = selectedTemplate.rawValue
+        self.weightUnitValue = weightUnit.rawValue
+    }
+}
+
+enum WeightUnit: Int, Codable, CaseIterable {
+    case lbs = 0
+    case kg = 1
+
+    var label: String {
+        switch self {
+        case .lbs: return "lbs"
+        case .kg: return "kg"
+        }
+    }
+
+    var barWeight: Double {
+        switch self {
+        case .lbs: return 45.0
+        case .kg: return 20.0
+        }
+    }
+
+    /// Rounding increment for plate math
+    var roundTo: Double {
+        switch self {
+        case .lbs: return 5.0
+        case .kg: return 2.5
+        }
+    }
+
+    /// Default TM progression per cycle
+    var upperIncrement: Double {
+        switch self {
+        case .lbs: return 5.0
+        case .kg: return 2.5
+        }
+    }
+
+    var lowerIncrement: Double {
+        switch self {
+        case .lbs: return 10.0
+        case .kg: return 5.0
+        }
     }
 }
 

@@ -3,7 +3,12 @@ import SwiftData
 
 struct HistoryView: View {
     @Query(sort: \WorkoutSession.date, order: .reverse) private var sessions: [WorkoutSession]
+    @Query private var userProfiles: [UserProfile]
     @Environment(\.modelContext) private var modelContext
+
+    private var unitLabel: String {
+        userProfiles.first?.weightUnit.label ?? "lbs"
+    }
 
     var body: some View {
         List {
@@ -59,7 +64,7 @@ struct HistoryView: View {
                                             Text("\(Int(session.estimated1RM))")
                                                 .font(.system(.title3, design: .rounded, weight: .black))
                                                 .foregroundColor(.white)
-                                            Text("lbs")
+                                            Text(unitLabel)
                                                 .font(.system(size: 10, weight: .bold))
                                                 .foregroundColor(.secondary)
                                         }

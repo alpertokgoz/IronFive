@@ -101,7 +101,7 @@ struct WorkoutActiveView: View {
             get: { selectedWeightForCalc.map { WeightIdentifiable(weight: $0) } },
             set: { selectedWeightForCalc = $0?.weight }
         )) { item in
-            PlateCalculatorView(targetWeight: item.weight)
+            PlateCalculatorView(targetWeight: item.weight, unit: profile.weightUnit)
         }
         .animation(.spring(), value: showRestTimer)
     }
@@ -158,10 +158,10 @@ struct WorkoutActiveView: View {
             } else {
                 profile.currentWeek = 1
                 profile.currentCycle += 1
-                profile.squatTM += 10
-                profile.deadliftTM += 10
-                profile.benchTM += 5
-                profile.ohpTM += 5
+                profile.squatTM += profile.weightUnit.lowerIncrement
+                profile.deadliftTM += profile.weightUnit.lowerIncrement
+                profile.benchTM += profile.weightUnit.upperIncrement
+                profile.ohpTM += profile.weightUnit.upperIncrement
             }
         }
 
@@ -245,12 +245,11 @@ struct SetRowView: View {
                         .foregroundStyle(workoutSet.isCompleted ? .secondary : .primary)
                 } else {
                     Button(action: onPlateCalc) {
-                        Text("\(String(format: "%.1f", workoutSet.weight)) lbs")
+                        Text("\(String(format: "%.1f", workoutSet.weight))")
                             .font(.system(.title2, design: .rounded, weight: .black))
                             .foregroundStyle(workoutSet.isCompleted ? .secondary : .primary)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("\(String(format: "%.1f", workoutSet.weight)) pounds. Tap for plate calculator.")
                 
                 if workoutSet.reps.contains("+") {
                     HStack(spacing: 6) {
