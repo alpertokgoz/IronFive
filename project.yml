@@ -6,9 +6,11 @@ targets:
     type: application
     platform: watchOS
     deploymentTarget: "10.0"
-    sources: [Sources]
+    sources:
+      - Sources
     settings:
       base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.antigravity.IronFiveWatch
         INFOPLIST_KEY_CFBundleDisplayName: IronFive
         INFOPLIST_KEY_UISupportedInterfaceOrientations:
           [UIInterfaceOrientationPortrait]
