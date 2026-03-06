@@ -123,7 +123,7 @@ struct WorkoutCalculator {
         var accessorySets: [WorkoutSet] = []
         for accessory in accessories where accessory.relatedLift == lift {
             for _ in 0..<accessory.targetSets {
-                accessorySets.append(WorkoutSet(weight: 0, reps: "\(accessory.targetReps) (\(accessory.name))", type: .accessory))
+                accessorySets.append(WorkoutSet(weight: accessory.weight, reps: "\(accessory.targetReps) (\(accessory.name))", type: .accessory))
             }
         }
 

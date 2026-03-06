@@ -8,6 +8,7 @@ struct AddAccessoryView: View {
     @State private var name: String = ""
     @State private var targetSets: Int = 3
     @State private var targetReps: Int = 10
+    @State private var weight: Double = 0
     @State private var relatedLift: MainLift = .squat
 
     var body: some View {
@@ -24,6 +25,19 @@ struct AddAccessoryView: View {
 
                     Stepper(value: $targetReps, in: 1...30) {
                         Text("\(targetReps) Reps")
+                    }
+                    
+                    HStack {
+                        Text("Weight")
+                        Spacer()
+                        Text("\(String(format: "%.1f", weight))")
+                            .fontWeight(.bold)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color.accentColor.opacity(0.2))
+                            .cornerRadius(8)
+                            .focusable()
+                            .digitalCrownRotation($weight, from: 0, through: 500, by: 2.5, sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
                     }
 
                     Picker("Related Lift", selection: $relatedLift) {
@@ -46,6 +60,7 @@ struct AddAccessoryView: View {
                             name: name,
                             targetSets: targetSets,
                             targetReps: targetReps,
+                            weight: weight,
                             relatedLift: relatedLift
                         )
                         modelContext.insert(newAccessory)

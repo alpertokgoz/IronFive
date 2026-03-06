@@ -47,10 +47,10 @@ struct CycleSummaryView: View {
                         .font(.system(size: 10, weight: .bold))
                         .foregroundColor(.secondary)
                     
-                    TMRow(name: "Squat", old: profile.squatTM, new: suggestedSquat, color: .orange)
-                    TMRow(name: "Bench", old: profile.benchTM, new: suggestedBench, color: .blue)
-                    TMRow(name: "Deadlift", old: profile.deadliftTM, new: suggestedDeadlift, color: .green)
-                    TMRow(name: "OHP", old: profile.ohpTM, new: suggestedOHP, color: .purple)
+                    TMRow(name: "Squat", old: profile.squatTM, new: $suggestedSquat, color: .orange)
+                    TMRow(name: "Bench", old: profile.benchTM, new: $suggestedBench, color: .blue)
+                    TMRow(name: "Deadlift", old: profile.deadliftTM, new: $suggestedDeadlift, color: .green)
+                    TMRow(name: "OHP", old: profile.ohpTM, new: $suggestedOHP, color: .purple)
                 }
                 .padding(.horizontal, 8)
 
@@ -68,23 +68,30 @@ struct CycleSummaryView: View {
         }
     }
 
-    private func TMRow(name: String, old: Double, new: Double, color: Color) -> some View {
+    private func TMRow(name: String, old: Double, new: Binding<Double>, color: Color) -> some View {
         HStack {
             Text(name)
                 .font(.system(.caption2, design: .rounded, weight: .bold))
                 .foregroundColor(color)
             Spacer()
-            HStack(spacing: 4) {
+            HStack(spacing: 6) {
                 Text("\(Int(old))")
                     .foregroundColor(.secondary)
                     .strikethrough()
+                
                 Image(systemName: "arrow.right")
                     .font(.system(size: 8))
                     .foregroundColor(.secondary)
-                Text("\(Int(new))")
-                    .fontWeight(.bold)
+                
+                Text("\(Int(new.wrappedValue))")
+                    .font(.system(size: 14, weight: .black, design: .rounded))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(Color.accentColor.opacity(0.15))
+                    .cornerRadius(6)
+                    .focusable()
+                    .digitalCrownRotation(new, from: 0, through: 1000, by: profile.weightUnit.roundTo, sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
             }
-            .font(.system(size: 12, design: .monospaced))
         }
     }
 

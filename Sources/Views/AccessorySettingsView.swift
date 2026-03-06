@@ -22,7 +22,7 @@ struct AccessorySettingsView: View {
                             HStack {
                                 VStack(alignment: .leading) {
                                     Text(accessory.name).fontWeight(.bold)
-                                    Text("\(accessory.targetSets) Sets x \(accessory.targetReps) Reps")
+                                    Text("\(accessory.targetSets) Sets x \(accessory.targetReps) @ \(String(format: "%.1f", accessory.weight))")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }

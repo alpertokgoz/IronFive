@@ -403,9 +403,19 @@ struct SetRowView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 if workoutSet.type == .accessory {
-                    Text(workoutSet.reps)
-                        .font(.system(.headline, design: .rounded, weight: .bold))
-                        .foregroundStyle(workoutSet.isCompleted ? .secondary : .primary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        if workoutSet.weight > 0 {
+                            Button(action: onPlateCalc) {
+                                Text("\(String(format: "%.1f", workoutSet.weight))")
+                                    .font(.system(.headline, design: .rounded, weight: .black))
+                                    .foregroundStyle(workoutSet.isCompleted ? .secondary : .primary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        Text(workoutSet.reps)
+                            .font(.system(.caption, design: .rounded, weight: .bold))
+                            .foregroundStyle(workoutSet.isCompleted ? .secondary : .primary)
+                    }
                 } else {
                     Button(action: onPlateCalc) {
                         Text("\(String(format: "%.1f", workoutSet.weight))")

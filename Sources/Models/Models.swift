@@ -145,6 +145,7 @@ final class AccessoryExercise {
     var name: String
     var targetSets: Int
     var targetReps: Int
+    var weight: Double
     var relatedLiftValue: Int // Raw value for MainLift enum
 
     var relatedLift: MainLift {
@@ -152,10 +153,11 @@ final class AccessoryExercise {
         set { relatedLiftValue = newValue.rawValue }
     }
 
-    init(name: String, targetSets: Int, targetReps: Int, relatedLift: MainLift) {
+    init(name: String, targetSets: Int, targetReps: Int, weight: Double = 0, relatedLift: MainLift) {
         self.name = name
         self.targetSets = targetSets
         self.targetReps = targetReps
+        self.weight = weight
         self.relatedLiftValue = relatedLift.rawValue
     }
 }
