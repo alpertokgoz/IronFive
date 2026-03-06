@@ -8,12 +8,14 @@ struct DashboardView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var workoutManager: WorkoutManager
     @State private var showOnboarding = false
+    @State private var showLiftPicker = false
+    @State private var overrideLift: MainLift?
 
     var body: some View {
         NavigationView {
             VStack(spacing: 16) {
                 if let profile = userProfiles.first {
-                    let nextLift = determineNextLift()
+                    let nextLift = overrideLift ?? determineNextLift()
                     
                     // Main Glanceable Card
                     VStack(spacing: 6) {
@@ -47,6 +49,14 @@ struct DashboardView: View {
                             .fill(nextLift.color.gradient)
                             .shadow(color: nextLift.color.opacity(0.4), radius: 8, x: 0, y: 4)
                     )
+                    
+                    // Override Selection
+                    Button("Change Lift") {
+                        showLiftPicker = true
+                    }
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .padding(.bottom, 4)
                     
                     // Secondary Actions
                     HStack(spacing: 12) {
@@ -98,6 +108,14 @@ struct DashboardView: View {
             .padding(.horizontal)
             .containerBackground(Color.black.gradient, for: .navigation)
         }
+        .confirmationDialog("Select Workout", isPresented: $showLiftPicker, titleVisibility: .visible) {
+            ForEach(MainLift.allCases, id: \.self) { lift in
+                Button(lift.name) {
+                    overrideLift = lift
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
         .onAppear {
             workoutManager.requestAuthorization()
             if userProfiles.isEmpty {
@@ -107,6 +125,10 @@ struct DashboardView: View {
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView()
         }
+        .onChange(of: workoutSessions.count) { _ in
+            // Clear override when a new workout saves
+            overrideLift = nil
+        }
     }
 
     private func determineNextLift() -> MainLift {
@@ -114,7 +136,6 @@ struct DashboardView: View {
             return .squat
         }
 
-        // Progression order: Squat -> Bench -> Deadlift -> OHP -> (Repeat)
         switch lastSession.mainLift {
         case .squat: return .bench
         case .bench: return .deadlift

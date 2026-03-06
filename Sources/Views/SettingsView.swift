@@ -11,6 +11,7 @@ struct SettingsView: View {
     @State private var ohpTM: String = ""
     @State private var selectedTemplate: SupplementalTemplate = .fsl
     @State private var selectedUnit: WeightUnit = .lbs
+    @State private var usesFourWeekCycle: Bool = false
 
     var body: some View {
         Form {
@@ -58,10 +59,12 @@ struct SettingsView: View {
                     }
                 }
                 
+                Toggle("Use 4-Week Cycle", isOn: $usesFourWeekCycle)
+                
                 HStack {
                     Image(systemName: "info.circle")
                         .foregroundColor(.secondary)
-                    Text("TMs auto-increase each cycle")
+                    Text(usesFourWeekCycle ? "TMs increase after Week 4" : "TMs increase after Week 3")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
@@ -91,6 +94,7 @@ struct SettingsView: View {
         ohpTM = String(format: "%.1f", profile.ohpTM)
         selectedTemplate = profile.selectedTemplate
         selectedUnit = profile.weightUnit
+        usesFourWeekCycle = profile.usesFourWeekCycle
     }
 
     private func saveProfile() {
@@ -101,6 +105,7 @@ struct SettingsView: View {
             profile.ohpTM = Double(ohpTM) ?? 0
             profile.selectedTemplate = selectedTemplate
             profile.weightUnit = selectedUnit
+            profile.usesFourWeekCycle = usesFourWeekCycle
         }
 
         do {

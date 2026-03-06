@@ -177,8 +177,11 @@ struct WorkoutActiveView: View {
         )
         modelContext.insert(session)
 
+        let isFourWeek = profile.usesFourWeekCycle
+        let maxWeek = isFourWeek ? 4 : 3
+
         if lift == .ohp {
-            if profile.currentWeek < 4 {
+            if profile.currentWeek < maxWeek {
                 profile.currentWeek += 1
             } else {
                 profile.currentWeek = 1
@@ -324,14 +327,27 @@ struct WorkoutPhaseView: View {
 
             Spacer()
 
-            Button("Next") {
-                withAnimation {
-                    selectedTab = nextTab
+            HStack(spacing: 20) {
+                Button("Skip Phase") {
+                    withAnimation {
+                        // Mark all uncompleted sets as not happening, then move on.
+                        // For the purpose of the UI, skipping just moves past them.
+                        selectedTab = nextTab
+                    }
                 }
+                .buttonStyle(.bordered)
+                .tint(.secondary)
+                .accessibilityLabel("Skip this phase")
+                
+                Button("Next") {
+                    withAnimation {
+                        selectedTab = nextTab
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .accessibilityLabel("Go to next phase")
             }
-            .buttonStyle(.bordered)
             .padding(.top, 8)
-            .accessibilityLabel("Go to next phase")
         }
         .padding()
     }
