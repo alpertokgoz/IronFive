@@ -78,10 +78,10 @@ struct WorkoutActiveView: View {
                         } else {
                             profile.currentWeek = 1
                             profile.currentCycle += 1
-                            profile.squat1RM += 10
-                            profile.deadlift1RM += 10
-                            profile.bench1RM += 5
-                            profile.ohp1RM += 5
+                            profile.squatTM += 10
+                            profile.deadliftTM += 10
+                            profile.benchTM += 5
+                            profile.ohpTM += 5
                         }
                     }
 
@@ -110,7 +110,7 @@ struct WorkoutActiveView: View {
         .overlay {
             if showRestTimer {
                 RestTimerView(timeRemaining: $restTimeRemaining, isPresented: $showRestTimer)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
             }
         }
         .sheet(item: Binding(
@@ -216,72 +216,72 @@ struct SetRowView: View {
 
     var body: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Button(action: onPlateCalc) {
                     Text("\(String(format: "%.1f", workoutSet.weight)) lbs")
-                        .font(.headline)
-                        .fontWeight(.black)
-                        .foregroundStyle(.primary)
+                        .font(.system(.title2, design: .rounded, weight: .black))
+                        .foregroundStyle(workoutSet.isCompleted ? .secondary : .primary)
                 }
                 .buttonStyle(.plain)
                 
                 if workoutSet.reps.contains("+") {
-                    HStack(spacing: 4) {
-                        Text("Reps:")
-                            .font(.caption2)
+                    HStack(spacing: 6) {
+                        Text("REPS")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
                             .foregroundStyle(.secondary)
                         
                         Text("\(workoutSet.actualReps)")
-                            .font(.body)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.accent)
+                            .font(.system(.title3, design: .rounded, weight: .black))
+                            .foregroundStyle(isRepFieldFocused ? .black : .accentColor)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 4)
+                            .background(isRepFieldFocused ? Color.accentColor : Color.white.opacity(0.1))
+                            .clipShape(Capsule())
                             .focusable()
                             .focused($isRepFieldFocused)
                             .digitalCrownRotation($workoutSet.actualReps.toDouble(), from: 0, through: 50, by: 1, sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(isRepFieldFocused ? Color.accentColor.opacity(0.3) : Color.white.opacity(0.1))
-                    .cornerRadius(8)
                 } else {
                     Text("\(workoutSet.reps) Reps")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.secondary)
+                        .font(.system(.subheadline, design: .rounded, weight: .bold))
+                        .foregroundColor(workoutSet.isCompleted ? .secondary.opacity(0.5) : .secondary)
                 }
             }
             Spacer()
 
             Button(action: {
-                if !workoutSet.isCompleted {
-                    if workoutSet.reps.contains("+") && workoutSet.actualReps == 0 {
-                        let target = Int(workoutSet.reps.replacingOccurrences(of: "+", with: "")) ?? 0
-                        workoutSet.actualReps = target
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                    if !workoutSet.isCompleted {
+                        if workoutSet.reps.contains("+") && workoutSet.actualReps == 0 {
+                            let target = Int(workoutSet.reps.replacingOccurrences(of: "+", with: "")) ?? 0
+                            workoutSet.actualReps = target
+                        }
+                        WKInterfaceDevice.current().play(.success)
+                        onComplete()
+                    } else {
+                        WKInterfaceDevice.current().play(.click)
                     }
-                    WKInterfaceDevice.current().play(.click)
-                    onComplete()
+                    workoutSet.isCompleted.toggle()
                 }
-                workoutSet.isCompleted.toggle()
             }) {
                 ZStack {
                     Circle()
                         .fill(workoutSet.isCompleted ? Color.green : Color.white.opacity(0.1))
-                        .frame(width: 44, height: 44)
+                        .frame(width: 48, height: 48)
+                        .shadow(color: workoutSet.isCompleted ? Color.green.opacity(0.4) : .clear, radius: 4, x: 0, y: 2)
                     
                     Image(systemName: workoutSet.isCompleted ? "checkmark" : "circle")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(workoutSet.isCompleted ? .black : .white.opacity(0.3))
+                        .font(.system(size: 20, weight: .heavy))
+                        .foregroundColor(workoutSet.isCompleted ? .black : .white.opacity(0.5))
                 }
             }
             .buttonStyle(.plain)
         }
-        .padding()
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
         .background(Material.thinMaterial)
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(workoutSet.isCompleted ? Color.green.opacity(0.5) : Color.white.opacity(0.1), lineWidth: 1)
-        )
+        .cornerRadius(20)
+        .opacity(workoutSet.isCompleted ? 0.6 : 1.0)
     }
 }
 
@@ -300,34 +300,44 @@ struct RestTimerView: View {
     @Binding var isPresented: Bool
 
     var body: some View {
-        VStack {
-            Text("Rest")
-                .font(.headline)
+        VStack(spacing: 20) {
+            Text("REST")
+                .font(.system(.footnote, design: .rounded, weight: .black))
+                .foregroundColor(.secondary)
+                .kerning(2.0)
             
             ZStack {
                 Circle()
-                    .stroke(Color.secondary.opacity(0.2), lineWidth: 8)
+                    .stroke(Color.white.opacity(0.1), lineWidth: 12)
                 Circle()
                     .trim(from: 0, to: Double(timeRemaining) / 90.0)
-                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 12, lineCap: .round))
                     .rotationEffect(.degrees(-90))
-                    .animation(.linear, value: timeRemaining)
+                    .animation(.linear(duration: 1.0), value: timeRemaining)
                 
                 Text("\(timeRemaining)")
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
+                    .font(.system(size: 50, weight: .black, design: .rounded))
+                    .contentTransition(.numericText())
+                    .animation(.snappy, value: timeRemaining)
             }
-            .frame(width: 100, height: 100)
-            .padding()
+            .frame(width: 120, height: 120)
 
-            Button("Skip") {
-                isPresented = false
+            Button(action: {
+                withAnimation {
+                    isPresented = false
+                }
+            }) {
+                Text("SKIP")
+                    .font(.system(.body, design: .rounded, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 100, height: 40)
+                    .background(Capsule().fill(Color.white.opacity(0.2)))
             }
-            .buttonStyle(.bordered)
-            .tint(.red)
+            .buttonStyle(.plain)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.black.opacity(0.95))
-        .cornerRadius(20)
+        .background(.black.opacity(0.85))
+        .background(Material.ultraThin)
         .ignoresSafeArea()
     }
 }

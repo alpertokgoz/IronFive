@@ -9,65 +9,91 @@ struct DashboardView: View {
     @EnvironmentObject var workoutManager: WorkoutManager
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 12) {
+        NavigationView {
+            VStack(spacing: 16) {
                 if let profile = userProfiles.first {
                     let nextLift = determineNextLift()
                     
                     // Main Glanceable Card
-                    VStack(spacing: 4) {
+                    VStack(spacing: 6) {
                         Text("Cycle \(profile.currentCycle) • Week \(profile.currentWeek)")
-                            .font(.caption2)
+                            .font(.footnote)
                             .fontWeight(.bold)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.8))
+                            .textCase(.uppercase)
+                            .kerning(1.2)
                         
                         Text(nextLift.name)
-                            .font(.title2)
-                            .fontWeight(.black)
-                            .foregroundStyle(.primary)
+                            .font(.system(size: 34, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                            .minimumScaleFactor(0.8)
                     }
-                    .padding(.top, 8)
+                    .padding(.top, 12)
                     
-                    // Action Button
+                    // Action Button (Large, prominent)
                     NavigationLink(destination: WorkoutActiveView(lift: nextLift, profile: profile, accessories: accessories)) {
-                        VStack {
-                            Image(systemName: "play.fill")
-                                .font(.title3)
-                            Text("Start")
-                                .font(.caption)
-                                .fontWeight(.bold)
+                        HStack {
+                            Image(systemName: "figure.strengthtraining.traditional")
+                                .font(.title2)
+                            Text("START")
+                                .font(.system(.title3, design: .rounded, weight: .black))
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .frame(maxWidth: .infinity, minHeight: 64)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.accentColor)
-                    .frame(height: 70)
-                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .buttonStyle(.plain)
+                    .background(
+                        RoundedRectangle(cornerRadius: 32)
+                            .fill(liftColor(nextLift).gradient)
+                            .shadow(color: liftColor(nextLift).opacity(0.4), radius: 8, x: 0, y: 4)
+                    )
                     
                     // Secondary Actions
-                    HStack(spacing: 8) {
+                    HStack(spacing: 12) {
                         NavigationLink(destination: HistoryView()) {
                             Image(systemName: "clock.arrow.circlepath")
+                                .font(.title3)
+                                .foregroundStyle(.white)
+                                .frame(width: 44, height: 44)
+                                .background(Color(white: 0.2))
+                                .clipShape(Circle())
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.plain)
                         
                         NavigationLink(destination: SettingsView()) {
                             Image(systemName: "gearshape.fill")
+                                .font(.title3)
+                                .foregroundStyle(.white)
+                                .frame(width: 44, height: 44)
+                                .background(Color(white: 0.2))
+                                .clipShape(Circle())
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.plain)
                     }
-                } else {
-                    Text("IronFive")
-                        .font(.headline)
-                    Text("Setup 1RMs to start")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    .padding(.bottom, 8)
                     
-                    NavigationLink("Settings", destination: SettingsView())
+                } else {
+                    VStack(spacing: 12) {
+                        Image(systemName: "dumbbell.fill")
+                            .font(.system(size: 40))
+                            .foregroundStyle(.orange.gradient)
+                        
+                        Text("IronFive")
+                            .font(.system(.title3, design: .rounded, weight: .black))
+                        
+                        Text("Set your 1RMs to begin your journey.")
+                            .font(.caption)
+                            .multilineTextAlignment(.center)
+                            .foregroundColor(.secondary)
+                        
+                        NavigationLink("Setup Now", destination: SettingsView())
+                            .buttonStyle(.borderedProminent)
+                            .tint(.orange)
+                    }
+                    .padding()
                 }
             }
             .padding(.horizontal)
-            .containerBackground(Color.accentColor.gradient, for: .navigation)
+            .containerBackground(Color.black.gradient, for: .navigation)
         }
         .onAppear {
             if userProfiles.isEmpty {
@@ -90,6 +116,15 @@ struct DashboardView: View {
         case .bench: return .deadlift
         case .deadlift: return .ohp
         case .ohp: return .squat
+        }
+    }
+
+    private func liftColor(_ lift: MainLift) -> Color {
+        switch lift {
+        case .squat: return .orange
+        case .bench: return .blue
+        case .deadlift: return .green
+        case .ohp: return .purple
         }
     }
 }

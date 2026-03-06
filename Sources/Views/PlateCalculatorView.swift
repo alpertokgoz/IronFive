@@ -38,7 +38,8 @@ struct PlateCalculatorView: View {
 
             if targetWeight <= 45 {
                 Text("Bar only")
-                    .font(.body)
+                    .font(.system(.body, design: .rounded, weight: .semibold))
+                    .foregroundColor(.secondary)
                     .italic()
                     .padding()
             } else {
@@ -46,19 +47,34 @@ struct PlateCalculatorView: View {
                     VStack(spacing: 8) {
                         ForEach(platesNeeded, id: \.weight) { plate in
                             HStack {
-                                Circle()
-                                    .fill(plateColor(plate.weight))
-                                    .frame(width: 12, height: 12)
+                                ZStack {
+                                    Circle()
+                                        .fill(plateColor(plate.weight).opacity(0.2))
+                                        .frame(width: 36, height: 36)
+                                    Circle()
+                                        .stroke(plateColor(plate.weight), lineWidth: 4)
+                                        .frame(width: 28, height: 28)
+                                }
+                                
                                 Text("\(String(format: "%.1f", plate.weight)) lb")
-                                    .fontWeight(.bold)
+                                    .font(.system(.title3, design: .rounded, weight: .bold))
+                                    .foregroundColor(.white)
+                                
                                 Spacer()
-                                Text("x\(plate.count)")
-                                    .font(.title3)
-                                    .fontWeight(.semibold)
+                                
+                                HStack(spacing: 2) {
+                                    Text("×")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text("\(plate.count)")
+                                        .font(.system(.title2, design: .rounded, weight: .black))
+                                        .foregroundColor(plateColor(plate.weight))
+                                }
                             }
-                            .padding()
-                            .background(Color.secondary.opacity(0.1))
-                            .cornerRadius(12)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color.white.opacity(0.05))
+                            .cornerRadius(16)
                         }
                     }
                 }

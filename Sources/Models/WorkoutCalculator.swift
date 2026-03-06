@@ -26,18 +26,17 @@ struct WorkoutSet: Identifiable, Hashable {
 
 struct WorkoutCalculator {
 
-    static func get1RM(for lift: MainLift, from profile: UserProfile) -> Double {
+    static func getTM(for lift: MainLift, from profile: UserProfile) -> Double {
         switch lift {
-        case .squat: return profile.squat1RM
-        case .bench: return profile.bench1RM
-        case .deadlift: return profile.deadlift1RM
-        case .ohp: return profile.ohp1RM
+        case .squat: return profile.squatTM
+        case .bench: return profile.benchTM
+        case .deadlift: return profile.deadliftTM
+        case .ohp: return profile.ohpTM
         }
     }
 
     static func generateWorkout(for lift: MainLift, profile: UserProfile, accessories: [AccessoryExercise]) -> (warmup: [WorkoutSet], main: [WorkoutSet], supplemental: [WorkoutSet], accessorySets: [WorkoutSet]) {
-        let oneRepMax = get1RM(for: lift, from: profile)
-        let tm = oneRepMax * profile.trainingMaxPercentage
+        let tm = getTM(for: lift, from: profile)
         let week = profile.currentWeek
 
         let warmup = [

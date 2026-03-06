@@ -3,11 +3,11 @@ import SwiftData
 
 @Model
 final class UserProfile {
-    var squat1RM: Double
-    var bench1RM: Double
-    var deadlift1RM: Double
-    var ohp1RM: Double
-    var trainingMaxPercentage: Double
+    var squatTM: Double
+    var benchTM: Double
+    var deadliftTM: Double
+    var ohpTM: Double
+    var trainingMaxPercentage: Double // Kept for initial setup calculation
 
     var currentCycle: Int
     var currentWeek: Int // 1 (5s), 2 (3s), 3 (5/3/1), 4 (Deload)
@@ -18,11 +18,11 @@ final class UserProfile {
         set { selectedTemplateValue = newValue.rawValue }
     }
 
-    init(squat1RM: Double = 0, bench1RM: Double = 0, deadlift1RM: Double = 0, ohp1RM: Double = 0, trainingMaxPercentage: Double = 0.90, currentCycle: Int = 1, currentWeek: Int = 1, selectedTemplate: SupplementalTemplate = .fsl) {
-        self.squat1RM = squat1RM
-        self.bench1RM = bench1RM
-        self.deadlift1RM = deadlift1RM
-        self.ohp1RM = ohp1RM
+    init(squatTM: Double = 0, benchTM: Double = 0, deadliftTM: Double = 0, ohpTM: Double = 0, trainingMaxPercentage: Double = 0.90, currentCycle: Int = 1, currentWeek: Int = 1, selectedTemplate: SupplementalTemplate = .fsl) {
+        self.squatTM = squatTM
+        self.benchTM = benchTM
+        self.deadliftTM = deadliftTM
+        self.ohpTM = ohpTM
         self.trainingMaxPercentage = trainingMaxPercentage
         self.currentCycle = currentCycle
         self.currentWeek = currentWeek
