@@ -20,8 +20,6 @@ targets:
         INFOPLIST_KEY_NSHealthShareUsageDescription: IronFive needs permission to read your heart rate and active energy during workouts.
         INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp: YES
         INFOPLIST_KEY_LSWatchOnly: YES
-        INFOPLIST_KEY_WKWatchOnly: YES
-        INFOPLIST_KEY_WKProtocolVersion: 2
         INFOPLIST_KEY_UIBackgroundModes: [workout-processing]
         CODE_SIGN_ENTITLEMENTS: Sources/IronFive.entitlements
 schemes:
