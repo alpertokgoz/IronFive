@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 struct WorkoutActiveView: View {
     let lift: MainLift
@@ -27,6 +28,9 @@ struct WorkoutActiveView: View {
     // Finish State
     @State private var showFinishConfirmation = false
     @State private var showCelebration = false
+    @State private var showCycleSummary = false
+    @State private var finalAmrapReps = 0
+    @State private var finalAmrapWeight = 0.0
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -103,10 +107,13 @@ struct WorkoutActiveView: View {
             fslSets = sets.fsl
             accessorySets = sets.accessorySets
             workoutManager.startWorkout()
+            
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
         }
         .onDisappear {
             timer?.invalidate()
             timer = nil
+            UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
         }
         .overlay {
             if showRestTimer {
@@ -119,6 +126,19 @@ struct WorkoutActiveView: View {
             set: { selectedWeightForCalc = $0?.weight }
         )) { item in
             PlateCalculatorView(targetWeight: item.weight, unit: profile.weightUnit)
+        }
+        .fullScreenCover(isPresented: $showCycleSummary) {
+            NavigationStack {
+                CycleSummaryView(
+                    profile: profile,
+                    lastLift: lift,
+                    amrapReps: finalAmrapReps,
+                    amrapWeight: finalAmrapWeight,
+                    onComplete: {
+                        dismiss()
+                    }
+                )
+            }
         }
         .animation(.spring(), value: showRestTimer)
     }
@@ -133,6 +153,16 @@ struct WorkoutActiveView: View {
         restTimeRemaining = 90
         WKInterfaceDevice.current().play(.start)
 
+        // Schedule background notification
+        let content = UNMutableNotificationContent()
+        content.title = "Rest Over"
+        content.body = "Back to the bar! Next set is ready."
+        content.sound = .default
+        
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 90, repeats: false)
+        let request = UNNotificationRequest(identifier: "restTimer", content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(request)
+
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             if restTimeRemaining > 0 {
@@ -144,6 +174,7 @@ struct WorkoutActiveView: View {
                 showRestTimer = false
                 timer?.invalidate()
                 WKInterfaceDevice.current().play(.success)
+                UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["restTimer"])
             }
         }
     }
@@ -180,16 +211,23 @@ struct WorkoutActiveView: View {
         let isFourWeek = profile.usesFourWeekCycle
         let maxWeek = isFourWeek ? 4 : 3
 
+        if lift == .ohp && profile.currentWeek == maxWeek {
+            // Cycle end! Show summary instead of automatic jump
+            finalAmrapReps = actualReps
+            finalAmrapWeight = weight
+            showCycleSummary = true
+            // Save current session first so it's in history
+            try? modelContext.save()
+            return // Don't dismiss yet, wait for summary confirm
+        }
+        
         if lift == .ohp {
             if profile.currentWeek < maxWeek {
                 profile.currentWeek += 1
             } else {
+                // Fallback / legacy path if summary isn't used
                 profile.currentWeek = 1
                 profile.currentCycle += 1
-                profile.squatTM += profile.weightUnit.lowerIncrement
-                profile.deadliftTM += profile.weightUnit.lowerIncrement
-                profile.benchTM += profile.weightUnit.upperIncrement
-                profile.ohpTM += profile.weightUnit.upperIncrement
             }
         }
 
@@ -483,6 +521,7 @@ struct RestTimerView: View {
             Button(action: {
                 withAnimation {
                     isPresented = false
+                    UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["restTimer"])
                 }
             }) {
                 Text("SKIP")

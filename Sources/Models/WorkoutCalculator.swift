@@ -134,4 +134,29 @@ struct WorkoutCalculator {
     static func calculatedWeight(_ exactWeight: Double, roundTo: Double = 5.0) -> Double {
         return Swift.round(exactWeight / roundTo) * roundTo
     }
+
+    // Epley Formula for Est. 1RM (Weight * (1 + 0.0333 * Reps))
+    static func calculateEstimated1RM(weight: Double, reps: Int) -> Double {
+        guard reps > 0 else { return 0 }
+        if reps == 1 { return weight }
+        return weight * (1.0 + (Double(reps) * 0.0333))
+    }
+
+    // Logic for suggesting TM increases based on AMRAP performance relative to current TM
+    static func calculateSuggestedIncrease(lift: MainLift, currentTM: Double, amrapWeight: Double, amrapReps: Int, unit: WeightUnit) -> Double {
+        let est1RM = calculateEstimated1RM(weight: amrapWeight, reps: amrapReps)
+        let standardIncrease = lift.isUpperBody ? unit.upperIncrement : unit.lowerIncrement
+        
+        // If they are vastly outperforming (estimated 1RM is 10%+ over TM), suggest a double jump
+        if est1RM > currentTM * 1.15 {
+            return standardIncrease * 2
+        } else if est1RM > currentTM * 1.05 {
+            return standardIncrease
+        } else if est1RM >= currentTM {
+            return standardIncrease
+        } else {
+            // Suggest staying flat if performance was lower than expected
+            return 0
+        }
+    }
 }

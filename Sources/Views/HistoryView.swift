@@ -1,17 +1,70 @@
 import SwiftUI
 import SwiftData
+import Charts
 
 struct HistoryView: View {
     @Query(sort: \WorkoutSession.date, order: .reverse) private var sessions: [WorkoutSession]
     @Query private var userProfiles: [UserProfile]
     @Environment(\.modelContext) private var modelContext
 
+    @State private var selectedChartLift: MainLift = .squat
+
     private var unitLabel: String {
         userProfiles.first?.weightUnit.label ?? "lbs"
     }
 
+    private var chartData: [WorkoutSession] {
+        sessions.filter { $0.mainLift == selectedChartLift && $0.amrapReps > 0 }
+            .sorted { $0.date < $1.date } // Chart expects oldest to newest
+    }
+
     var body: some View {
         List {
+            Section {
+                VStack(alignment: .leading, spacing: 12) {
+                    Picker("Lift", selection: $selectedChartLift) {
+                        ForEach(MainLift.allCases, id: \.self) { lift in
+                            Text(lift.name).tag(lift)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(selectedChartLift.color)
+                    
+                    if chartData.isEmpty {
+                        Text("No AMRAP data for \(selectedChartLift.name)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical)
+                    } else {
+                        Chart(chartData) { session in
+                            LineMark(
+                                x: .value("Date", session.date),
+                                y: .value("Est 1RM", session.estimated1RM)
+                            )
+                            .foregroundStyle(selectedChartLift.color)
+                            .symbol(Circle())
+                        }
+                        .chartYScale(domain: .automatic(includesZero: false))
+                        .chartYAxis {
+                            AxisMarks(position: .leading) { value in
+                                AxisValueLabel {
+                                    if let intVal = value.as(Int.self) {
+                                        Text("\(intVal)")
+                                            .font(.system(size: 8, weight: .bold))
+                                    }
+                                }
+                            }
+                        }
+                        .chartXAxis(.hidden)
+                        .frame(height: 120)
+                        .padding(.top, 8)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+            .listRowBackground(Color.white.opacity(0.05))
+
             if sessions.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "list.bullet.clipboard")

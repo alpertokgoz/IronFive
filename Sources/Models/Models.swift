@@ -13,6 +13,7 @@ final class UserProfile {
     var currentWeek: Int // 1 (5s), 2 (3s), 3 (5/3/1), 4 (Deload)
     var selectedTemplateValue: Int // Raw value for SupplementalTemplate
     var weightUnitValue: Int // Raw value for WeightUnit
+    var usesFourWeekCycle: Bool = false
 
     var selectedTemplate: SupplementalTemplate {
         get { SupplementalTemplate(rawValue: selectedTemplateValue) ?? .fsl }
@@ -33,6 +34,7 @@ final class UserProfile {
         self.currentWeek = currentWeek
         self.selectedTemplateValue = selectedTemplate.rawValue
         self.weightUnitValue = weightUnit.rawValue
+        self.usesFourWeekCycle = usesFourWeekCycle
     }
 }
 
@@ -127,6 +129,13 @@ enum MainLift: Int, Codable, CaseIterable {
         case .bench: return .blue
         case .deadlift: return .green
         case .ohp: return .purple
+        }
+    }
+
+    var isUpperBody: Bool {
+        switch self {
+        case .bench, .ohp: return true
+        default: return false
         }
     }
 }
