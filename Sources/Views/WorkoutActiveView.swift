@@ -104,7 +104,7 @@ struct WorkoutActiveView: View {
             let sets = WorkoutCalculator.generateWorkout(for: lift, profile: profile, accessories: accessories)
             warmupSets = sets.warmup
             mainSets = sets.main
-            fslSets = sets.fsl
+            fslSets = sets.supplemental
             accessorySets = sets.accessorySets
             workoutManager.startWorkout()
             

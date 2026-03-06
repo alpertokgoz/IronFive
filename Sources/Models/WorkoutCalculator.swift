@@ -132,7 +132,7 @@ struct WorkoutCalculator {
 
     // Round to nearest increment (5 lbs or 2.5 kg)
     static func calculatedWeight(_ exactWeight: Double, roundTo: Double = 5.0) -> Double {
-        return Swift.round(exactWeight / roundTo) * roundTo
+        return (exactWeight / roundTo).rounded() * roundTo
     }
 
     // Epley Formula for Est. 1RM (Weight * (1 + 0.0333 * Reps))

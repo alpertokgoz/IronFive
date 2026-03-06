@@ -125,7 +125,7 @@ struct DashboardView: View {
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView()
         }
-        .onChange(of: workoutSessions.count) { _ in
+        .onChange(of: workoutSessions.count) { oldValue, newValue in
             // Clear override when a new workout saves
             overrideLift = nil
         }

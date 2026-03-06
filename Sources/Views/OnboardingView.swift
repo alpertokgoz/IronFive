@@ -34,7 +34,7 @@ struct OnboardingView: View {
                     Text("lbs").tag(WeightUnit.lbs)
                     Text("kg").tag(WeightUnit.kg)
                 }
-                .pickerStyle(.segmented)
+                .pickerStyle(.navigationLink)
                 .padding(.horizontal, 16)
 
                 Button(action: { withAnimation { currentStep = 1 } }) {
@@ -129,7 +129,7 @@ struct OnboardingView: View {
     }
 
     private func tmResultRow(_ name: String, value: Double, color: Color) -> some View {
-        let rounded = round(value / selectedUnit.roundTo) * selectedUnit.roundTo
+        let rounded = (value / selectedUnit.roundTo).rounded() * selectedUnit.roundTo
         return HStack {
             Circle()
                 .fill(color)
@@ -147,10 +147,10 @@ struct OnboardingView: View {
         let pct = tmPercentage / 100.0
         let r = selectedUnit.roundTo
         let profile = UserProfile(
-            squatTM: round(squat1RM * pct / r) * r,
-            benchTM: round(bench1RM * pct / r) * r,
-            deadliftTM: round(deadlift1RM * pct / r) * r,
-            ohpTM: round(ohp1RM * pct / r) * r,
+            squatTM: (squat1RM * pct / r).rounded() * r,
+            benchTM: (bench1RM * pct / r).rounded() * r,
+            deadliftTM: (deadlift1RM * pct / r).rounded() * r,
+            ohpTM: (ohp1RM * pct / r).rounded() * r,
             weightUnit: selectedUnit
         )
         modelContext.insert(profile)

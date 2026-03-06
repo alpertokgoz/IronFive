@@ -27,7 +27,7 @@ struct HistoryView: View {
                             Text(lift.name).tag(lift)
                         }
                     }
-                    .pickerStyle(.menu)
+                    .pickerStyle(.navigationLink)
                     .tint(selectedChartLift.color)
                     
                     if chartData.isEmpty {
