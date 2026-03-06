@@ -24,8 +24,9 @@ struct WorkoutActiveView: View {
     // Plate Calculator State
     @State private var selectedWeightForCalc: Double?
     
-    // Finish Confirmation
+    // Finish State
     @State private var showFinishConfirmation = false
+    @State private var showCelebration = false
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -50,18 +51,34 @@ struct WorkoutActiveView: View {
                 .tag(3)
 
             // Finish
-            VStack {
-                Text("Great Job!")
-                    .font(.system(.title, design: .rounded, weight: .black))
+            VStack(spacing: 12) {
+                if showCelebration {
+                    CelebrationView()
+                } else {
+                    Spacer()
+                    
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: 40))
+                        .foregroundStyle(.yellow.gradient)
+                    
+                    Text("Great Job!")
+                        .font(.system(.title2, design: .rounded, weight: .black))
+                    
+                    if workoutManager.running {
+                        Text(workoutManager.elapsedTimeString)
+                            .font(.system(.caption, design: .rounded, weight: .bold))
+                            .foregroundColor(.secondary)
+                    }
 
-                Spacer()
+                    Spacer()
 
-                Button("Finish Workout") {
-                    showFinishConfirmation = true
+                    Button("Finish Workout") {
+                        showFinishConfirmation = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.green)
+                    .accessibilityLabel("Finish and save this workout")
                 }
-                .buttonStyle(.borderedProminent)
-                .padding()
-                .accessibilityLabel("Finish and save this workout")
             }
             .padding()
             .tabItem { Text("Finish") }
@@ -69,7 +86,7 @@ struct WorkoutActiveView: View {
             .alert("Finish Workout?", isPresented: $showFinishConfirmation) {
                 Button("Cancel", role: .cancel) { }
                 Button("Finish", role: .destructive) {
-                    finishWorkout()
+                    triggerCelebration()
                 }
             } message: {
                 Text("This will save your session and advance your program.")
@@ -131,10 +148,21 @@ struct WorkoutActiveView: View {
         }
     }
 
+    private func triggerCelebration() {
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
+            showCelebration = true
+        }
+        WKInterfaceDevice.current().play(.notification)
+        
+        // Auto-save and dismiss after celebration
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+            finishWorkout()
+        }
+    }
+
     private func finishWorkout() {
         workoutManager.endWorkout()
 
-        // Find the AMRAP set if it exists and was completed
         let amrapSet = mainSets.last { $0.reps.contains("+") && $0.isCompleted }
         let actualReps = amrapSet?.actualReps ?? 0
         let weight = amrapSet?.weight ?? 0
@@ -149,9 +177,6 @@ struct WorkoutActiveView: View {
         )
         modelContext.insert(session)
 
-        // Advance week after every lift; advance cycle after OHP (4th lift)
-        // The lift order is: Squat → Bench → Deadlift → OHP
-        // OHP is the last lift of a week, so advancing week happens here
         if lift == .ohp {
             if profile.currentWeek < 4 {
                 profile.currentWeek += 1
@@ -168,16 +193,93 @@ struct WorkoutActiveView: View {
         do {
             try modelContext.save()
         } catch {
-            // Log failure — in a future version, surface this to the user
             print("Failed to save workout: \(error.localizedDescription)")
         }
         dismiss()
     }
-
 }
 
+// MARK: - Celebration View
+struct CelebrationView: View {
+    @State private var particles: [ConfettiParticle] = []
+    @State private var showText = false
 
-// Extracting Phase View for Reusability
+    struct ConfettiParticle: Identifiable {
+        let id = UUID()
+        var x: CGFloat
+        var y: CGFloat
+        let color: Color
+        let symbol: String
+        let size: CGFloat
+        var opacity: Double = 1.0
+    }
+
+    var body: some View {
+        ZStack {
+            ForEach(particles) { p in
+                Text(p.symbol)
+                    .font(.system(size: p.size))
+                    .foregroundColor(p.color)
+                    .position(x: p.x, y: p.y)
+                    .opacity(p.opacity)
+            }
+
+            VStack(spacing: 8) {
+                Text("🏋️")
+                    .font(.system(size: 44))
+                    .scaleEffect(showText ? 1.0 : 0.3)
+
+                Text("CRUSHED IT!")
+                    .font(.system(.title3, design: .rounded, weight: .black))
+                    .foregroundColor(.white)
+                    .scaleEffect(showText ? 1.0 : 0.5)
+                    .opacity(showText ? 1.0 : 0.0)
+
+                Text("Saving workout...")
+                    .font(.system(.caption2, design: .rounded, weight: .bold))
+                    .foregroundColor(.secondary)
+                    .opacity(showText ? 1.0 : 0.0)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            spawnConfetti()
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.5)) {
+                showText = true
+            }
+        }
+    }
+
+    private func spawnConfetti() {
+        let symbols = ["⭐️", "💪", "🔥", "✨", "🎉", "💥"]
+        let colors: [Color] = [.orange, .blue, .green, .purple, .yellow, .red]
+
+        for i in 0..<18 {
+            let startX = CGFloat.random(in: 20...170)
+            let startY: CGFloat = -10
+            let endY = CGFloat.random(in: 40...180)
+
+            let particle = ConfettiParticle(
+                x: startX,
+                y: startY,
+                color: colors[i % colors.count],
+                symbol: symbols[i % symbols.count],
+                size: CGFloat.random(in: 10...18)
+            )
+            particles.append(particle)
+
+            let index = particles.count - 1
+            withAnimation(.interpolatingSpring(stiffness: 30, damping: 6).delay(Double(i) * 0.05)) {
+                particles[index].y = endY
+            }
+            withAnimation(.easeOut(duration: 0.5).delay(1.8 + Double(i) * 0.02)) {
+                particles[index].opacity = 0
+            }
+        }
+    }
+}
+
+// MARK: - Workout Phase View
 struct WorkoutPhaseView: View {
     let title: String
     @Binding var sets: [WorkoutSet]
@@ -192,18 +294,24 @@ struct WorkoutPhaseView: View {
     var body: some View {
         VStack {
             Text(title)
-                .font(.title2)
-                .fontWeight(.bold)
-                .padding(.bottom, 8)
+                .font(.system(.title2, design: .rounded, weight: .black))
+                .padding(.bottom, 4)
 
             if workoutManager.running {
-                HStack {
-                    Image(systemName: "heart.fill").foregroundStyle(.red)
-                    Text(String(format: "%.0f BPM", workoutManager.heartRate))
+                HStack(spacing: 12) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "heart.fill").foregroundStyle(.red)
+                        Text(String(format: "%.0f", workoutManager.heartRate))
+                    }
+                    HStack(spacing: 3) {
+                        Image(systemName: "timer").foregroundStyle(.secondary)
+                        Text(workoutManager.elapsedTimeString)
+                    }
                 }
-                .font(.caption)
+                .font(.system(.caption2, design: .rounded, weight: .bold))
+                .foregroundColor(.secondary)
                 .padding(.bottom, 4)
-                .accessibilityLabel("Heart rate: \(Int(workoutManager.heartRate)) beats per minute")
+                .accessibilityLabel("Heart rate: \(Int(workoutManager.heartRate)) BPM. Duration: \(workoutManager.elapsedTimeString)")
             }
 
             ScrollView {
@@ -223,11 +331,13 @@ struct WorkoutPhaseView: View {
             }
             .buttonStyle(.bordered)
             .padding(.top, 8)
+            .accessibilityLabel("Go to next phase")
         }
         .padding()
     }
 }
 
+// MARK: - Set Row View
 struct SetRowView: View {
     @Binding var workoutSet: WorkoutSet
     var onComplete: () -> Void
@@ -239,7 +349,6 @@ struct SetRowView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 if workoutSet.type == .accessory {
-                    // Accessories: show only the rep/name info, no weight
                     Text(workoutSet.reps)
                         .font(.system(.headline, design: .rounded, weight: .bold))
                         .foregroundStyle(workoutSet.isCompleted ? .secondary : .primary)
@@ -250,30 +359,32 @@ struct SetRowView: View {
                             .foregroundStyle(workoutSet.isCompleted ? .secondary : .primary)
                     }
                     .buttonStyle(.plain)
-                
-                if workoutSet.reps.contains("+") {
-                    HStack(spacing: 6) {
-                        Text("REPS")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
-                            .foregroundStyle(.secondary)
-                        
-                        Text("\(workoutSet.actualReps)")
-                            .font(.system(.title3, design: .rounded, weight: .black))
-                            .foregroundStyle(isRepFieldFocused ? .black : .accentColor)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 4)
-                            .background(isRepFieldFocused ? Color.accentColor : Color.white.opacity(0.1))
-                            .clipShape(Capsule())
-                            .focusable()
-                            .focused($isRepFieldFocused)
-                            .digitalCrownRotation($workoutSet.actualReps.toDouble(), from: 0, through: 50, by: 1, sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
+                    .accessibilityLabel("\(String(format: "%.1f", workoutSet.weight)). Tap for plate calculator.")
+                    
+                    if workoutSet.reps.contains("+") {
+                        HStack(spacing: 6) {
+                            Text("REPS")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .foregroundStyle(.secondary)
+                            
+                            Text("\(workoutSet.actualReps)")
+                                .font(.system(.title3, design: .rounded, weight: .black))
+                                .foregroundStyle(isRepFieldFocused ? .black : .accentColor)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 4)
+                                .background(isRepFieldFocused ? Color.accentColor : Color.white.opacity(0.1))
+                                .clipShape(Capsule())
+                                .focusable()
+                                .focused($isRepFieldFocused)
+                                .digitalCrownRotation($workoutSet.actualReps.toDouble(), from: 0, through: 50, by: 1, sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
+                                .accessibilityLabel("AMRAP reps: \(workoutSet.actualReps). Use Digital Crown to adjust.")
+                        }
+                    } else {
+                        Text("\(workoutSet.reps) Reps")
+                            .font(.system(.subheadline, design: .rounded, weight: .bold))
+                            .foregroundColor(workoutSet.isCompleted ? .secondary.opacity(0.5) : .secondary)
                     }
-                } else {
-                    Text("\(workoutSet.reps) Reps")
-                        .font(.system(.subheadline, design: .rounded, weight: .bold))
-                        .foregroundColor(workoutSet.isCompleted ? .secondary.opacity(0.5) : .secondary)
                 }
-                } // end else (non-accessory)
             }
             Spacer()
 
@@ -304,6 +415,7 @@ struct SetRowView: View {
                 }
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(workoutSet.isCompleted ? "Mark set as not done" : "Mark set as done")
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
@@ -313,7 +425,7 @@ struct SetRowView: View {
     }
 }
 
-// Helper for Digital Crown with Int
+// MARK: - Helpers
 extension Binding where Value == Int {
     func toDouble() -> Binding<Double> {
         return Binding<Double>(
@@ -323,6 +435,7 @@ extension Binding where Value == Int {
     }
 }
 
+// MARK: - Rest Timer View
 struct RestTimerView: View {
     @Binding var timeRemaining: Int
     @Binding var isPresented: Bool
@@ -349,6 +462,7 @@ struct RestTimerView: View {
                     .animation(.snappy, value: timeRemaining)
             }
             .frame(width: 120, height: 120)
+            .accessibilityLabel("Rest timer: \(timeRemaining) seconds remaining")
 
             Button(action: {
                 withAnimation {
@@ -362,6 +476,7 @@ struct RestTimerView: View {
                     .background(Capsule().fill(Color.white.opacity(0.2)))
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Skip rest timer")
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.black.opacity(0.85))

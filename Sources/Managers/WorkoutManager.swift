@@ -6,10 +6,12 @@ class WorkoutManager: NSObject, ObservableObject {
     let healthStore = HKHealthStore()
     var session: HKWorkoutSession?
     var builder: HKLiveWorkoutBuilder?
+    var timer: Timer?
 
     @Published var running: Bool = false
     @Published var heartRate: Double = 0
     @Published var activeEnergy: Double = 0
+    @Published var elapsedTimeString: String = "00:00"
 
     let logger = Logger(subsystem: "com.antigravity.IronFive", category: "WorkoutManager")
 
@@ -46,7 +48,10 @@ class WorkoutManager: NSObject, ObservableObject {
             session?.startActivity(with: startDate)
             builder?.beginCollection(withStart: startDate) { success, error in
                 if success {
-                    DispatchQueue.main.async { self.running = true }
+                    DispatchQueue.main.async {
+                        self.running = true
+                        self.startTimer()
+                    }
                 }
             }
         } catch {
@@ -54,7 +59,21 @@ class WorkoutManager: NSObject, ObservableObject {
         }
     }
 
+    private func startTimer() {
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            guard let self = self, let builder = self.builder else { return }
+            let elapsed = builder.elapsedTime
+            let minutes = Int(elapsed) / 60
+            let seconds = Int(elapsed) % 60
+            DispatchQueue.main.async {
+                self.elapsedTimeString = String(format: "%02d:%02d", minutes, seconds)
+            }
+        }
+    }
+
     func endWorkout() {
+        timer?.invalidate()
+        timer = nil
         session?.end()
         builder?.endCollection(withEnd: Date()) { success, error in
             self.builder?.finishWorkout { workout, error in
