@@ -8,7 +8,6 @@ final class UserProfile {
     var benchTM: Double
     var deadliftTM: Double
     var ohpTM: Double
-    var trainingMaxPercentage: Double // Kept for initial setup calculation
 
     var currentCycle: Int
     var currentWeek: Int // 1 (5s), 2 (3s), 3 (5/3/1), 4 (Deload)
@@ -19,12 +18,11 @@ final class UserProfile {
         set { selectedTemplateValue = newValue.rawValue }
     }
 
-    init(squatTM: Double = 0, benchTM: Double = 0, deadliftTM: Double = 0, ohpTM: Double = 0, trainingMaxPercentage: Double = 0.90, currentCycle: Int = 1, currentWeek: Int = 1, selectedTemplate: SupplementalTemplate = .fsl) {
+    init(squatTM: Double = 0, benchTM: Double = 0, deadliftTM: Double = 0, ohpTM: Double = 0, currentCycle: Int = 1, currentWeek: Int = 1, selectedTemplate: SupplementalTemplate = .fsl) {
         self.squatTM = squatTM
         self.benchTM = benchTM
         self.deadliftTM = deadliftTM
         self.ohpTM = ohpTM
-        self.trainingMaxPercentage = trainingMaxPercentage
         self.currentCycle = currentCycle
         self.currentWeek = currentWeek
         self.selectedTemplateValue = selectedTemplate.rawValue

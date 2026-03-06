@@ -117,6 +117,7 @@ struct DashboardView: View {
         case .deadlift: return .ohp
         case .ohp: return .squat
         }
+    }
 }
 
 #Preview {

@@ -78,7 +78,7 @@ struct WorkoutActiveView: View {
         .tabViewStyle(.page)
         .navigationTitle(lift.name)
         .navigationBarTitleDisplayMode(.inline)
-        .containerBackground(liftColor(lift).gradient, for: .navigation)
+        .containerBackground(lift.color.gradient, for: .navigation)
         .onAppear {
             let sets = WorkoutCalculator.generateWorkout(for: lift, profile: profile, accessories: accessories)
             warmupSets = sets.warmup
@@ -174,10 +174,8 @@ struct WorkoutActiveView: View {
         dismiss()
     }
 
-    private func liftColor(_ lift: MainLift) -> Color {
-        lift.color
-    }
 }
+
 
 // Extracting Phase View for Reusability
 struct WorkoutPhaseView: View {
