@@ -4,15 +4,15 @@ import SwiftData
 
 @Model
 final class UserProfile {
-    var squatTM: Double
-    var benchTM: Double
-    var deadliftTM: Double
-    var ohpTM: Double
+    var squatTM: Double = 0
+    var benchTM: Double = 0
+    var deadliftTM: Double = 0
+    var ohpTM: Double = 0
 
-    var currentCycle: Int
-    var currentWeek: Int // 1 (5s), 2 (3s), 3 (5/3/1), 4 (Deload)
-    var selectedTemplateValue: Int // Raw value for SupplementalTemplate
-    var weightUnitValue: Int // Raw value for WeightUnit
+    var currentCycle: Int = 1
+    var currentWeek: Int = 1 // 1 (5s), 2 (3s), 3 (5/3/1), 4 (Deload)
+    var selectedTemplateValue: Int = 0 // Raw value for SupplementalTemplate
+    var weightUnitValue: Int = 0 // Raw value for WeightUnit
     var usesFourWeekCycle: Bool = false
 
     var selectedTemplate: SupplementalTemplate {
@@ -142,11 +142,11 @@ enum MainLift: Int, Codable, CaseIterable {
 
 @Model
 final class AccessoryExercise {
-    var name: String
-    var targetSets: Int
-    var targetReps: Int
-    var weight: Double
-    var relatedLiftValue: Int // Raw value for MainLift enum
+    var name: String = ""
+    var targetSets: Int = 3
+    var targetReps: Int = 10
+    var weight: Double = 0
+    var relatedLiftValue: Int = 0 // Raw value for MainLift enum
 
     var relatedLift: MainLift {
         get { MainLift(rawValue: relatedLiftValue) ?? .squat }
@@ -164,15 +164,15 @@ final class AccessoryExercise {
 
 @Model
 final class WorkoutSession {
-    var date: Date
-    var mainLiftValue: Int
-    var week: Int
-    var cycle: Int
-    var isCompleted: Bool
+    var date: Date = Date()
+    var mainLiftValue: Int = 0
+    var week: Int = 1
+    var cycle: Int = 1
+    var isCompleted: Bool = false
     
     // New fields for AMRAP tracking
-    var amrapReps: Int
-    var amrapWeight: Double
+    var amrapReps: Int = 0
+    var amrapWeight: Double = 0
 
     var mainLift: MainLift {
         get { MainLift(rawValue: mainLiftValue) ?? .squat }
