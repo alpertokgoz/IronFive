@@ -22,8 +22,15 @@ targets:
         INFOPLIST_KEY_LSWatchOnly: YES
         INFOPLIST_KEY_UIBackgroundModes: [workout-processing]
         CODE_SIGN_ENTITLEMENTS: Sources/IronFive.entitlements
+        TARGETED_DEVICE_FAMILY: 4
+        SDKROOT: watchos
 schemes:
   IronFive:
+    shared: true
     build:
       targets:
         IronFive: [all]
+    run:
+      config: Debug
+    archive:
+      config: Release
