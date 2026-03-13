@@ -139,9 +139,9 @@ enum MainLift: Int, Codable, CaseIterable {
 
     var symbolName: String {
         switch self {
-        case .squat: return "figure.squat"
-        case .bench: return "figure.bench.press"
-        case .deadlift: return "figure.deadlift"
+        case .squat: return "dumbbell.fill"
+        case .bench: return "figure.strengthtraining.traditional"
+        case .deadlift: return "figure.strengthtraining.functional"
         case .ohp: return "figure.arms.up"
         }
     }

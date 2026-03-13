@@ -46,7 +46,7 @@ struct DashboardView: View {
                             let completed = isLiftCompletedThisWeek(lift, week: profile.currentWeek, cycle: profile.currentCycle)
                             ZStack {
                                 Circle()
-                                    .stroke(completed ? lift.color : Color.white.opacity(0.2), lineWidth: 1.5)
+                                    .stroke(completed ? lift.color : Color.white.opacity(0.3), lineWidth: 1.5)
                                     .frame(width: 28, height: 28)
                                 
                                 if completed {
@@ -56,8 +56,12 @@ struct DashboardView: View {
                                 }
                                 
                                 Image(systemName: lift.symbolName)
-                                    .font(.system(size: 13, weight: .black))
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 15, height: 15)
+                                    .fontWeight(.heavy)
                                     .foregroundColor(completed ? .white : lift.color)
+                                    .zIndex(1)
                             }
                         }
                     }

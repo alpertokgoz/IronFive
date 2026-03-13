@@ -61,7 +61,10 @@ struct WorkoutActiveView: View {
                         HStack(spacing: 4) {
                             if let icon = step.liftIcon {
                                 Image(systemName: icon)
-                                    .font(.system(size: 12, weight: .heavy))
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 14, height: 14)
+                                    .fontWeight(.heavy)
                                     .foregroundStyle(lift.color.gradient)
                             }
                             Text(step.title.uppercased())
@@ -539,7 +542,10 @@ struct WorkoutStepView: View {
             
             if let icon = step.liftIcon {
                 Image(systemName: icon)
-                    .font(.system(size: 28, weight: .black))
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 32, height: 32)
+                    .fontWeight(.black)
                     .foregroundStyle(lift.color.gradient)
                     .padding(.bottom, 2)
             }
