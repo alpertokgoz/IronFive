@@ -83,11 +83,11 @@ struct WorkoutActiveView: View {
                     .progressViewStyle(.linear)
                     .tint(.green)
                     .background(Color.white.opacity(0.15))
-                    .frame(height: 3)
+                    .frame(height: 2)
                     .clipShape(Capsule())
-                    .padding(.horizontal, 6)
+                    .padding(.horizontal, 4)
             }
-            .padding(.bottom, 4)
+            .padding(.bottom, 2)
             .background(Color.black.opacity(0.4))
 
             TabView(selection: $selectedTab) {
@@ -608,11 +608,11 @@ struct WorkoutStepView: View {
                         .foregroundColor(.white.opacity(0.6))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
+                        .background(Capsule().stroke(Color.white.opacity(0.3), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.bottom, 4)
+            .padding(.bottom, 15) // Reclaim safe area space
             .padding(.horizontal, 2)
         }
     }
@@ -774,7 +774,7 @@ struct SetRowView: View {
         .padding(.vertical, 8)
         .padding(.horizontal, 8)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 12)
                 .fill(Color.white.opacity(0.05))
         )
         .sheet(isPresented: $showAmrapSheet) {
