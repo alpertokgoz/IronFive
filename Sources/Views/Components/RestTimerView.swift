@@ -1,4 +1,6 @@
 import SwiftUI
+import UserNotifications
+import WatchKit
 
 struct RestTimerView: View {
     @Binding var timeRemaining: Int

@@ -1,4 +1,5 @@
 import SwiftUI
+import WatchKit
 
 struct SetRowView: View {
     @Binding var workoutSet: WorkoutSet

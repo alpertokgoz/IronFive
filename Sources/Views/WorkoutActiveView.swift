@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import UserNotifications
+import WatchKit
 
 struct WorkoutActiveView: View {
     let lift: MainLift
