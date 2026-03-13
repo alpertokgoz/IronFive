@@ -20,7 +20,7 @@ struct WorkoutStepView: View {
                     let currentPhaseSteps = allSteps.filter { $0.title == step.title }
                     let currentIdx = currentPhaseSteps.firstIndex(where: { $0.id == step.id }) ?? 0
 
-                    Text("\(currentIdx + 1)/\(currentPhaseSteps.count) SET")
+                    Text("\(currentIdx + 1)/\(currentPhaseSteps.count)")
                         .font(.system(size: 8, weight: .black, design: .rounded))
                         .foregroundColor(.white.opacity(0.5))
 
@@ -72,15 +72,6 @@ struct WorkoutStepView: View {
                     .cornerRadius(4)
                     .padding(.bottom, 2)
                 }
-            } else if let pct = step.percentage {
-                Text("\(pct)%")
-                    .font(.system(size: 10, weight: .black, design: .rounded))
-                    .foregroundColor(lift.color)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(lift.color.opacity(0.15))
-                    .cornerRadius(4)
-                    .padding(.bottom, 2)
             }
 
             SetRowView(

@@ -12,9 +12,9 @@ struct AddAccessoryView: View {
     @State private var targetReps: Int = 10
     @State private var weight: Double = 0
     @State private var relatedLift: MainLift = .squat
-    
+
     @FocusState private var focusedField: Field?
-    
+
     enum Field {
         case sets, reps, weight
     }
@@ -25,7 +25,7 @@ struct AddAccessoryView: View {
                 VStack(spacing: 12) {
                     TextField("Exercise Name", text: $name)
                         .padding(.horizontal)
-                    
+
                     VStack(spacing: 8) {
                         Picker("Related Lift", selection: $relatedLift) {
                             ForEach(MainLift.allCases, id: \.self) { lift in
@@ -33,9 +33,9 @@ struct AddAccessoryView: View {
                             }
                         }
                         .pickerStyle(.navigationLink)
-                        
+
                         Divider().background(Color.white.opacity(0.1))
-                        
+
                         // Sets
                         HStack {
                             Text("Sets")
@@ -51,7 +51,7 @@ struct AddAccessoryView: View {
                                 .focused($focusedField, equals: .sets)
                                 .digitalCrownRotation($targetSets.toDouble(), from: 1, through: 10, by: 1, sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
                         }
-                        
+
                         // Reps
                         HStack {
                             Text("Reps")
@@ -67,7 +67,7 @@ struct AddAccessoryView: View {
                                 .focused($focusedField, equals: .reps)
                                 .digitalCrownRotation($targetReps.toDouble(), from: 1, through: 50, by: 1, sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
                         }
-                        
+
                         // Weight
                         HStack {
                             Text("Weight")
@@ -92,7 +92,7 @@ struct AddAccessoryView: View {
                     .padding()
                     .background(Color.white.opacity(0.05))
                     .cornerRadius(12)
-                    
+
                     Button(action: save) {
                         Text("SAVE")
                             .font(.system(size: 16, weight: .black, design: .rounded))
@@ -117,7 +117,7 @@ struct AddAccessoryView: View {
             }
         }
     }
-    
+
     private func save() {
         if let editingAccessory = editingAccessory {
             editingAccessory.name = name
@@ -135,18 +135,9 @@ struct AddAccessoryView: View {
             )
             modelContext.insert(newAccessory)
         }
-        
+
         try? modelContext.save()
         dismiss()
-    }
-}
-
-private extension Binding where Value == Int {
-    func toDouble() -> Binding<Double> {
-        return Binding<Double>(
-            get: { Double(self.wrappedValue) },
-            set: { self.wrappedValue = Int($0) }
-        )
     }
 }
 

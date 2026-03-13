@@ -1,5 +1,4 @@
 import SwiftUI
-import WatchKit
 
 struct SetRowView: View {
     @Binding var workoutSet: WorkoutSet
@@ -54,19 +53,16 @@ struct SetRowView: View {
                 handleCompletion()
             }) {
                 ZStack {
-                    // 1. Background Track
                     Circle()
                         .stroke(Color.white.opacity(0.15), lineWidth: 4)
                         .background(Circle().fill(Color.white.opacity(0.05)))
 
-                    // 2. Filling Animation
                     Circle()
                         .fill(isAMRAP ? Color.orange : Color.green)
                         .scaleEffect(workoutSet.isCompleted ? 1.0 : 0.001)
                         .opacity(workoutSet.isCompleted ? 1.0 : 0.0)
                         .animation(.spring(response: 0.4, dampingFraction: 0.6), value: workoutSet.isCompleted)
 
-                    // 3. Checkmark
                     if workoutSet.isCompleted {
                         Image(systemName: "checkmark")
                             .font(.system(size: 22, weight: .black))
@@ -74,17 +70,16 @@ struct SetRowView: View {
                             .transition(.scale.combined(with: .opacity))
                     }
 
-                    // 4. Particles
                     if showParticles {
                         ParticleBurstView()
                     }
                 }
-                .frame(width: 44, height: 44)
+                .frame(width: 36, height: 36)
                 .scaleEffect(scale)
             }
             .buttonStyle(.plain)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
         .padding(.horizontal, 8)
         .background(
             ZStack {
@@ -102,7 +97,7 @@ struct SetRowView: View {
                 Text("TAP")
                     .font(.system(size: 6, weight: .black))
                     .foregroundColor(.white.opacity(0.3))
-                    .padding(.trailing, 22)
+                    .padding(.trailing, 18)
             }
         }
         .sheet(isPresented: $showAmrapSheet) {
@@ -153,109 +148,5 @@ struct SetRowView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             showParticles = false
         }
-    }
-}
-
-struct ParticleBurstView: View {
-    @State private var particles: [Particle] = []
-
-    struct Particle: Identifiable {
-        let id = UUID()
-        var x: CGFloat
-        var y: CGFloat
-        var scale: CGFloat
-        var opacity: Double
-        var speedX: CGFloat
-        var speedY: CGFloat
-        let color: Color
-    }
-
-    var body: some View {
-        GeometryReader { geo in
-            ZStack {
-                ForEach(particles) { p in
-                    Circle()
-                        .fill(p.color)
-                        .frame(width: 4, height: 4)
-                        .scaleEffect(p.scale)
-                        .opacity(p.opacity)
-                        .position(x: p.x, y: p.y)
-                }
-            }
-            .onAppear {
-                let center = CGPoint(x: geo.size.width/2, y: geo.size.height/2)
-                for _ in 0..<12 {
-                    let angle = Double.random(in: 0..<2 * .pi)
-                    let speed = CGFloat.random(in: 10...30)
-                    particles.append(Particle(
-                        x: center.x,
-                        y: center.y,
-                        scale: CGFloat.random(in: 0.5...1.0),
-                        opacity: 1,
-                        speedX: cos(angle) * speed,
-                        speedY: sin(angle) * speed,
-                        color: [.green, .mint, .white].randomElement()!
-                    ))
-                }
-
-                withAnimation(.easeOut(duration: 0.6)) {
-                    for i in particles.indices {
-                        particles[i].x += particles[i].speedX
-                        particles[i].y += particles[i].speedY
-                        particles[i].scale = 0
-                        particles[i].opacity = 0
-                    }
-                }
-            }
-        }
-        .allowsHitTesting(false)
-    }
-}
-
-struct AmrapInputView: View {
-    @Binding var reps: Int
-    var onDone: () -> Void
-    @FocusState private var isFocused: Bool
-
-    var body: some View {
-        VStack(spacing: 12) {
-            Text("How many reps?")
-                .font(.system(size: 14, weight: .black, design: .rounded))
-
-            HStack(spacing: 4) {
-                Text("\(reps)")
-                    .font(.system(size: 40, weight: .black, design: .rounded))
-                    .foregroundColor(isFocused ? .black : .accentColor)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(isFocused ? Color.accentColor : Color.white.opacity(0.1))
-                    .cornerRadius(12)
-                    .focusable()
-                    .focused($isFocused)
-                    .digitalCrownRotation($reps.toDouble(), from: 0, through: 50, by: 1, sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
-
-                Text("REPS")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.secondary)
-            }
-
-            Button("Done") {
-                onDone()
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.green)
-        }
-        .onAppear {
-            isFocused = true
-        }
-    }
-}
-
-private extension Binding where Value == Int {
-    func toDouble() -> Binding<Double> {
-        return Binding<Double>(
-            get: { Double(self.wrappedValue) },
-            set: { self.wrappedValue = Int($0) }
-        )
     }
 }

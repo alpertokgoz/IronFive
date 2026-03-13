@@ -20,10 +20,10 @@ struct WorkoutActiveView: View {
     @State private var showRestTimer = false
     @State private var restTimeRemaining = 90
     @State private var timer: Timer?
-    
+
     // Plate Calculator State
     @State private var selectedWeightForCalc: Double?
-    
+
     // Finish State
     @State private var showFinishConfirmation = false
     @State private var showCelebration = false
@@ -33,66 +33,7 @@ struct WorkoutActiveView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header: Title & Progress
-            VStack(spacing: 2) {
-                HStack(alignment: .firstTextBaseline) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("CYCLE \(profile.currentCycle)")
-                            .font(.system(size: 8, weight: .black, design: .rounded))
-                            .foregroundColor(.white.opacity(0.6))
-                        Text(weekName(for: profile.currentWeek).uppercased())
-                            .font(.system(size: 10, weight: .heavy, design: .rounded))
-                            .foregroundColor(.accentColor)
-                    }
-                    
-                    Spacer()
-                    
-                    if selectedTab < steps.count {
-                        let step = steps[selectedTab]
-                        HStack(spacing: 4) {
-                            if let icon = step.liftIcon {
-                                Image(systemName: icon)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(width: 14, height: 14)
-                                    .fontWeight(.heavy)
-                                    .foregroundStyle(lift.color.gradient)
-                            }
-                            Text("\(lift.shortName) · \(step.title.uppercased())")
-                                .font(.system(size: 11, weight: .heavy, design: .rounded))
-                                .foregroundColor(.white)
-                                .lineLimit(1)
-                        }
-                    } else {
-                        Text("COMPLETED")
-                            .font(.system(size: 11, weight: .heavy, design: .rounded))
-                            .foregroundColor(.accentColor)
-                    }
-                }
-                .padding(.horizontal, 8)
-                .padding(.top, 2)
-
-                // Overall Workout Progress Bar
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color.white.opacity(0.15))
-                        .frame(height: 6)
-
-                    let progress = steps.count > 0 ? Double(completedStepsCount) / Double(steps.count) : 0
-                    Capsule()
-                        .fill(Color.green.gradient)
-                        .frame(width: max(0, (WKInterfaceDevice.current().screenBounds.width - 8) * progress), height: 6)
-
-                    Text("\(Int(progress * 100))%")
-                        .font(.system(size: 6, weight: .black, design: .monospaced))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }
-                .padding(.horizontal, 4)
-                .padding(.bottom, 2)
-            }
-            .padding(.bottom, 2)
-            .background(Color.black.opacity(0.4))
+            headerView()
 
             TabView(selection: $selectedTab) {
                 ForEach(Array(steps.enumerated()), id: \.element.id) { index, step in
@@ -147,9 +88,9 @@ struct WorkoutActiveView: View {
                         .font(.system(size: 7, weight: .bold))
                         .foregroundColor(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 HStack(spacing: 4) {
                     Image(systemName: "timer")
                         .foregroundColor(.purple)
@@ -285,7 +226,7 @@ struct WorkoutActiveView: View {
         }
         return steps
     }
-    
+
     private func weekName(for week: Int) -> String {
         switch week {
         case 1: return "5's Week"
@@ -293,6 +234,16 @@ struct WorkoutActiveView: View {
         case 3: return "5/3/1 Week"
         case 4: return "Deload"
         default: return "Training"
+        }
+    }
+
+    private func weekAbbreviation(for week: Int) -> String {
+        switch week {
+        case 1: return "5's"
+        case 2: return "3's"
+        case 3: return "5/3/1"
+        case 4: return "Deload"
+        default: return ""
         }
     }
 
@@ -305,7 +256,7 @@ struct WorkoutActiveView: View {
         content.title = "Rest Over"
         content.body = "Back to the bar!"
         content.sound = .default
-        
+
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 90, repeats: false)
         let request = UNNotificationRequest(identifier: "restTimer", content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request)
@@ -326,7 +277,7 @@ struct WorkoutActiveView: View {
             }
         }
     }
-    
+
     private func advanceTab() {
         if selectedTab < steps.count {
             WKInterfaceDevice.current().play(.directionUp)
@@ -341,7 +292,7 @@ struct WorkoutActiveView: View {
             showCelebration = true
         }
         WKInterfaceDevice.current().play(.notification)
-        
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
             finishWorkout()
         }
@@ -365,66 +316,97 @@ struct WorkoutActiveView: View {
         modelContext.insert(session)
 
         let maxWeek = profile.usesFourWeekCycle ? 4 : 3
-        if lift == .ohp && profile.currentWeek == maxWeek {
-            finalAmrapReps = actualReps
-            finalAmrapWeight = weight
-            showCycleSummary = true
-            try? modelContext.save()
-            return
-        }
-        
-        if lift == .ohp {
-            if profile.currentWeek < maxWeek {
-                profile.currentWeek += 1
+        if areAllLiftsCompletedThisWeek() {
+            if profile.currentWeek == maxWeek {
+                finalAmrapReps = actualReps
+                finalAmrapWeight = weight
+                showCycleSummary = true
+                try? modelContext.save()
+                return
             } else {
-                profile.currentWeek = 1
-                profile.currentCycle += 1
+                profile.currentWeek += 1
             }
         }
 
         try? modelContext.save()
         dismiss()
     }
-}
 
-// MARK: - Subviews & Helpers
+    private func areAllLiftsCompletedThisWeek() -> Bool {
+        let currentLifts = Set(workoutSessions.filter {
+            $0.week == profile.currentWeek &&
+            $0.cycle == profile.currentCycle &&
+            $0.isCompleted
+        }.map { $0.mainLift })
 
-struct WeightIdentifiable: Identifiable {
-    let id = UUID()
-    let weight: Double
-}
+        // Include the current lift since it's about to be saved
+        var allLifts = currentLifts
+        allLifts.insert(lift)
 
-extension WorkoutActiveView {
+        return allLifts.count >= 4
+    }
+
     private func calculateRepsToBeatPR(for step: WorkoutStep) -> Int? {
         let liftSessions = workoutSessions.filter { $0.mainLift == lift && $0.isCompleted }
         let currentBestE1RM = liftSessions.map { $0.estimated1RM }.max() ?? 0
-        
+
         if currentBestE1RM == 0 { return nil }
-        
+
         let weight = step.workoutSet.weight
         if weight == 0 { return nil }
-        
+
         // Epley: e1RM = W * (1 + 0.0333 * R)
         // R = (e1RM / W - 1) / 0.0333
         let neededReps = (currentBestE1RM / weight - 1) / 0.0333
         let target = Int(ceil(neededReps))
         return max(target, 1)
     }
-}
 
-private extension Binding where Value == Int {
-    func toDouble() -> Binding<Double> {
-        return Binding<Double>(
-            get: { Double(self.wrappedValue) },
-            set: { self.wrappedValue = Int($0) }
-        )
-    }
-}
+    private func headerView() -> some View {
+        VStack(spacing: 0) {
+            // Primary Title Row: Lift Icon + Name
+            HStack(alignment: .center, spacing: 4) {
+                if let icon = steps.indices.contains(selectedTab) ? steps[selectedTab].liftIcon : nil {
+                    Image(systemName: icon)
+                        .font(.system(size: 10, weight: .black))
+                        .foregroundStyle(lift.color.gradient)
+                }
 
-extension WorkoutSet {
-    var completedReps: Int {
-        if actualReps > 0 { return actualReps }
-        return Int(reps.replacingOccurrences(of: "+", with: "")) ?? 0
+                Text("\(lift.name.uppercased())")
+                    .font(.system(size: 11, weight: .black, design: .rounded))
+
+                if steps.indices.contains(selectedTab) {
+                    Text("· \(steps[selectedTab].title.uppercased())")
+                        .font(.system(size: 8, weight: .bold, design: .rounded))
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.top, 2)
+
+            // Secondary Stat Row: Cycle + Progress Bar
+            HStack(alignment: .center, spacing: 6) {
+                Text("C\(profile.currentCycle) · \(weekAbbreviation(for: profile.currentWeek).uppercased())")
+                    .font(.system(size: 7, weight: .black, design: .rounded))
+                    .foregroundColor(.accentColor)
+
+                Spacer()
+
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.15))
+                        .frame(height: 3)
+
+                    let progress = !steps.isEmpty ? Double(completedStepsCount) / Double(steps.count) : 0
+                    Capsule()
+                        .fill(Color.green.gradient)
+                        .frame(width: max(0, 70 * progress), height: 3)
+                }
+                .frame(width: 70)
+            }
+            .padding(.horizontal, 8)
+            .padding(.bottom, 2)
+            .background(Color.black.opacity(0.6))
+        }
     }
 }
 

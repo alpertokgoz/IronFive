@@ -52,15 +52,15 @@ struct SettingsView: View {
                     Text("lbs").tag(WeightUnit.lbs)
                     Text("kg").tag(WeightUnit.kg)
                 }
-                
+
                 Picker("Template", selection: $selectedTemplate) {
                     ForEach(SupplementalTemplate.allCases, id: \.self) { template in
                         Text(template.name).tag(template)
                     }
                 }
-                
+
                 Toggle("Use 4-Week Cycle", isOn: $usesFourWeekCycle)
-                
+
                 HStack {
                     Image(systemName: "info.circle")
                         .foregroundColor(.secondary)

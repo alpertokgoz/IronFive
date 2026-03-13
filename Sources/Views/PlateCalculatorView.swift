@@ -29,13 +29,12 @@ struct PlateCalculatorView: View {
                 .font(.headline)
                 .padding(.top)
 
-            VStack(spacing: 4) {
+            VStack(spacing: 2) {
                 Text("\(String(format: "%.1f", targetWeight)) \(unit.label)")
-                    .font(.title)
-                    .fontWeight(.black)
+                    .font(.system(size: 20, weight: .black, design: .rounded))
                     .foregroundStyle(.tint)
                 Text("(per side, \(String(format: "%.0f", unit.barWeight))\(unit.label) bar)")
-                    .font(.caption2)
+                    .font(.system(size: 8, weight: .bold))
                     .foregroundColor(.secondary)
             }
 
@@ -47,37 +46,30 @@ struct PlateCalculatorView: View {
                     .padding()
             } else {
                 ScrollView {
-                    VStack(spacing: 8) {
+                    VStack(spacing: 6) {
                         ForEach(platesNeeded, id: \.weight) { plate in
-                            HStack {
-                                ZStack {
-                                    Circle()
-                                        .fill(plateColor(plate.weight).opacity(0.2))
-                                        .frame(width: 36, height: 36)
-                                    Circle()
-                                        .stroke(plateColor(plate.weight), lineWidth: 4)
-                                        .frame(width: 28, height: 28)
-                                }
-                                
+                            HStack(spacing: 8) {
+                                Circle()
+                                    .stroke(plateColor(plate.weight), lineWidth: 3)
+                                    .frame(width: 20, height: 20)
+                                    .overlay(
+                                        Text(plate.weight == 1.25 ? "1.2" : "\(Int(plate.weight))")
+                                            .font(.system(size: 6, weight: .black))
+                                    )
+
                                 Text("\(String(format: "%.1f", plate.weight)) \(unit.label)")
-                                    .font(.system(.title3, design: .rounded, weight: .bold))
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
                                     .foregroundColor(.white)
-                                
+
                                 Spacer()
-                                
-                                HStack(spacing: 2) {
-                                    Text("×")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Text("\(plate.count)")
-                                        .font(.system(.title2, design: .rounded, weight: .black))
-                                        .foregroundColor(plateColor(plate.weight))
-                                }
+
+                                Text("\(plate.count)")
+                                    .font(.system(size: 20, weight: .black, design: .rounded))
+                                    .foregroundColor(plateColor(plate.weight))
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Color.white.opacity(0.05))
-                            .cornerRadius(16)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.05)))
                         }
                     }
                 }
@@ -95,30 +87,26 @@ struct PlateCalculatorView: View {
     }
 
     private func plateColor(_ weight: Double) -> Color {
-        return unit == .kg ? kgPlateColor(weight) : lbsPlateColor(weight)
-    }
-
-    private func kgPlateColor(_ weight: Double) -> Color {
-        switch weight {
-        case 25: return .red
-        case 20: return .blue
-        case 15: return .yellow
-        case 10: return .green
-        case 5: return .white
-        case 2.5: return .orange
-        case 1.25: return .gray
-        default: return .gray
-        }
-    }
-
-    private func lbsPlateColor(_ weight: Double) -> Color {
-        switch weight {
-        case 45: return .blue
-        case 25: return .yellow
-        case 10: return .white
-        case 5: return .red
-        case 2.5: return .green
-        default: return .gray
+        if unit == .kg {
+            switch weight {
+            case 25: return .red
+            case 20: return .blue
+            case 15: return .yellow
+            case 10: return .green
+            case 5: return .white
+            case 2.5: return .orange
+            case 1.25: return .gray
+            default: return .gray
+            }
+        } else {
+            switch weight {
+            case 45: return .blue
+            case 25: return .yellow
+            case 10: return .white
+            case 5: return .red
+            case 2.5: return .green
+            default: return .gray
+            }
         }
     }
 }

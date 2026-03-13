@@ -30,6 +30,11 @@ struct WorkoutSet: Identifiable, Hashable {
         guard actualReps > 0 else { return 0 }
         return weight * (1.0 + (Double(actualReps) * 0.0333))
     }
+
+    var completedReps: Int {
+        if actualReps > 0 { return actualReps }
+        return Int(reps.replacingOccurrences(of: "+", with: "")) ?? 0
+    }
 }
 
 struct WorkoutCalculator {
@@ -43,6 +48,15 @@ struct WorkoutCalculator {
         }
     }
 
+    struct WorkoutGenerationContext {
+        let tm: Double
+        let week: Int
+        let round: Double
+        let liftName: String
+        let profile: UserProfile
+        let fslPercentage: Double
+    }
+
     static func generateWorkout(for lift: MainLift, profile: UserProfile, accessories: [AccessoryExercise]) -> (warmup: [WorkoutSet], main: [WorkoutSet], supplemental: [WorkoutSet], accessorySets: [WorkoutSet]) {
         let tm = getTM(for: lift, from: profile)
         let week = profile.currentWeek
@@ -50,11 +64,26 @@ struct WorkoutCalculator {
         let liftName = lift.name
 
         let warmup = generateWarmupSets(tm: tm, round: round, liftName: liftName)
-        let (main, fslPercentage, sslWeight) = generateMainSets(tm: tm, week: week, round: round, liftName: liftName)
-        let supplemental = generateSupplementalSets(tm: tm, week: week, round: round, liftName: liftName, profile: profile, fslPercentage: fslPercentage, sslWeight: sslWeight)
-        let accessorySets = generateAccessorySets(lift: lift, accessories: accessories)
+        let mainData = generateMainSets(tm: tm, week: week, round: round, liftName: liftName)
 
-        return (warmup, main, supplemental, accessorySets)
+        let context = WorkoutGenerationContext(
+            tm: tm,
+            week: week,
+            round: round,
+            liftName: liftName,
+            profile: profile,
+            fslPercentage: mainData.fslPercentage
+        )
+        let supplemental = generateSupplementalSets(context: context)
+
+        var accessorySets: [WorkoutSet] = []
+        for accessory in accessories where accessory.relatedLift == lift {
+            for _ in 0..<accessory.targetSets {
+                accessorySets.append(WorkoutSet(weight: accessory.weight, reps: "\(accessory.targetReps)", type: .accessory, exerciseName: accessory.name))
+            }
+        }
+
+        return (warmup, mainData.sets, supplemental, accessorySets)
     }
 
     private static func generateWarmupSets(tm: Double, round: Double, liftName: String) -> [WorkoutSet] {
@@ -65,92 +94,68 @@ struct WorkoutCalculator {
         ]
     }
 
-    private static func generateMainSets(tm: Double, week: Int, round: Double, liftName: String) -> (sets: [WorkoutSet], fslPercentage: Double, sslWeight: Double) {
-        var main: [WorkoutSet] = []
-        var fslPercentage: Double = 0.65
-        var sslWeight: Double = 0
+    private static func generateMainSets(tm: Double, week: Int, round: Double, liftName: String) -> (sets: [WorkoutSet], fslPercentage: Double) {
+        let fslPercentage: Double
+        let setDetails: [(percentage: Double, reps: String)]
 
         switch week {
-        case 1: // 5s week
+        case 1:
             fslPercentage = 0.65
-            main = [
-                WorkoutSet(weight: calculatedWeight(tm * 0.65, roundTo: round), reps: "5", type: .main, exerciseName: liftName),
-                WorkoutSet(weight: calculatedWeight(tm * 0.75, roundTo: round), reps: "5", type: .main, exerciseName: liftName),
-                WorkoutSet(weight: calculatedWeight(tm * 0.85, roundTo: round), reps: "5+", type: .main, exerciseName: liftName)
-            ]
-            sslWeight = calculatedWeight(tm * 0.75, roundTo: round)
-        case 2: // 3s week
+            setDetails = [(0.65, "5"), (0.75, "5"), (0.85, "5+")]
+        case 2:
             fslPercentage = 0.70
-            main = [
-                WorkoutSet(weight: calculatedWeight(tm * 0.70, roundTo: round), reps: "3", type: .main, exerciseName: liftName),
-                WorkoutSet(weight: calculatedWeight(tm * 0.80, roundTo: round), reps: "3", type: .main, exerciseName: liftName),
-                WorkoutSet(weight: calculatedWeight(tm * 0.90, roundTo: round), reps: "3+", type: .main, exerciseName: liftName)
-            ]
-            sslWeight = calculatedWeight(tm * 0.80, roundTo: round)
-        case 3: // 5/3/1 week
+            setDetails = [(0.70, "3"), (0.80, "3"), (0.90, "3+")]
+        case 3:
             fslPercentage = 0.75
-            main = [
-                WorkoutSet(weight: calculatedWeight(tm * 0.75, roundTo: round), reps: "5", type: .main, exerciseName: liftName),
-                WorkoutSet(weight: calculatedWeight(tm * 0.85, roundTo: round), reps: "3", type: .main, exerciseName: liftName),
-                WorkoutSet(weight: calculatedWeight(tm * 0.95, roundTo: round), reps: "1+", type: .main, exerciseName: liftName)
-            ]
-            sslWeight = calculatedWeight(tm * 0.85, roundTo: round)
-        case 4: // Deload week
+            setDetails = [(0.75, "5"), (0.85, "3"), (0.95, "1+")]
+        case 4:
             fslPercentage = 0.40
-            main = [
-                WorkoutSet(weight: calculatedWeight(tm * 0.40, roundTo: round), reps: "5", type: .main, exerciseName: liftName),
-                WorkoutSet(weight: calculatedWeight(tm * 0.50, roundTo: round), reps: "5", type: .main, exerciseName: liftName),
-                WorkoutSet(weight: calculatedWeight(tm * 0.60, roundTo: round), reps: "5", type: .main, exerciseName: liftName)
-            ]
-            sslWeight = calculatedWeight(tm * 0.40, roundTo: round)
+            setDetails = [(0.40, "5"), (0.50, "5"), (0.60, "5")]
         default:
-            fslPercentage = 0.65
-            main = [
-                WorkoutSet(weight: calculatedWeight(tm * 0.65, roundTo: round), reps: "5", type: .main, exerciseName: liftName)
-            ]
-            sslWeight = calculatedWeight(tm * 0.65, roundTo: round)
+            return ([WorkoutSet(weight: calculatedWeight(tm * 0.65, roundTo: round), reps: "5", type: .main, exerciseName: liftName)], 0.65)
         }
-        return (main, fslPercentage, sslWeight)
+
+        let sets = setDetails.map { detail in
+            WorkoutSet(weight: calculatedWeight(tm * detail.percentage, roundTo: round), reps: detail.reps, type: .main, exerciseName: liftName)
+        }
+        return (sets, fslPercentage)
     }
 
-    private static func generateSupplementalSets(tm: Double, week: Int, round: Double, liftName: String, profile: UserProfile, fslPercentage: Double, sslWeight: Double) -> [WorkoutSet] {
-        var supplemental: [WorkoutSet] = []
-        let supplementalName = "\(liftName) (\(profile.selectedTemplate.shortName))"
-        let fslWeight = calculatedWeight(tm * fslPercentage, roundTo: round)
+    private static func generateSupplementalSets(context: WorkoutGenerationContext) -> [WorkoutSet] {
+        guard context.week != 4 else { return [] }
 
-        if week != 4 {
-            switch profile.selectedTemplate {
-            case .fsl:
-                for _ in 0..<5 {
-                    supplemental.append(WorkoutSet(weight: fslWeight, reps: "5", type: .supplemental, exerciseName: supplementalName))
-                }
-            case .bbb:
-                for _ in 0..<5 {
-                    supplemental.append(WorkoutSet(weight: calculatedWeight(tm * 0.50, roundTo: round), reps: "10", type: .supplemental, exerciseName: supplementalName))
-                }
-            case .ssl:
-                for _ in 0..<5 {
-                    supplemental.append(WorkoutSet(weight: sslWeight, reps: "5", type: .supplemental, exerciseName: supplementalName))
-                }
-            case .bbs:
-                for _ in 0..<10 {
-                    supplemental.append(WorkoutSet(weight: fslWeight, reps: "5", type: .supplemental, exerciseName: supplementalName))
-                }
-            case .widowmaker:
-                supplemental.append(WorkoutSet(weight: fslWeight, reps: "20", type: .supplemental, exerciseName: supplementalName))
-            }
-        }
-        return supplemental
-    }
+        let targetWeight: Double
+        let targetReps: String
+        let setCounts: Int
+        let supplementalName = "\(context.liftName) (\(context.profile.selectedTemplate.shortName))"
 
-    private static func generateAccessorySets(lift: MainLift, accessories: [AccessoryExercise]) -> [WorkoutSet] {
-        var accessorySets: [WorkoutSet] = []
-        for accessory in accessories where accessory.relatedLift == lift {
-            for _ in 0..<accessory.targetSets {
-                accessorySets.append(WorkoutSet(weight: accessory.weight, reps: "\(accessory.targetReps)", type: .accessory, exerciseName: accessory.name))
-            }
+        switch context.profile.selectedTemplate {
+        case .fsl:
+            targetWeight = calculatedWeight(context.tm * context.fslPercentage, roundTo: context.round)
+            targetReps = "5"
+            setCounts = 5
+        case .bbb:
+            targetWeight = calculatedWeight(context.tm * 0.50, roundTo: context.round)
+            targetReps = "10"
+            setCounts = 5
+        case .ssl:
+            let sslPercentages: [Int: Double] = [1: 0.75, 2: 0.80, 3: 0.85]
+            targetWeight = calculatedWeight(context.tm * (sslPercentages[context.week] ?? context.fslPercentage), roundTo: context.round)
+            targetReps = "5"
+            setCounts = 5
+        case .bbs:
+            targetWeight = calculatedWeight(context.tm * context.fslPercentage, roundTo: context.round)
+            targetReps = "5"
+            setCounts = 10
+        case .widowmaker:
+            targetWeight = calculatedWeight(context.tm * context.fslPercentage, roundTo: context.round)
+            targetReps = "20"
+            setCounts = 1
         }
-        return accessorySets
+
+        return (0..<setCounts).map { _ in
+            WorkoutSet(weight: targetWeight, reps: targetReps, type: .supplemental, exerciseName: supplementalName)
+        }
     }
 
     // Round to nearest increment (5 lbs or 2.5 kg)
@@ -169,7 +174,7 @@ struct WorkoutCalculator {
     static func calculateSuggestedIncrease(lift: MainLift, currentTM: Double, amrapWeight: Double, amrapReps: Int, unit: WeightUnit) -> Double {
         let est1RM = calculateEstimated1RM(weight: amrapWeight, reps: amrapReps)
         let standardIncrease = lift.isUpperBody ? unit.upperIncrement : unit.lowerIncrement
-        
+
         // If they are vastly outperforming (estimated 1RM is 10%+ over TM), suggest a double jump
         if est1RM > currentTM * 1.15 {
             return standardIncrease * 2

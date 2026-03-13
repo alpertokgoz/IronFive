@@ -4,9 +4,9 @@ import SwiftData
 struct CycleSummaryView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) var dismiss
-    
+
     @Query private var accessories: [AccessoryExercise]
-    
+
     let profile: UserProfile
     let lastLift: MainLift
     let amrapReps: Int
@@ -26,7 +26,7 @@ struct CycleSummaryView: View {
                     Text("CYCLE \(profile.currentCycle) COMPLETE")
                         .font(.system(size: 8, weight: .bold, design: .rounded))
                         .foregroundColor(.accentColor)
-                    
+
                     Text("AUTO-REGULATION")
                         .font(.system(size: 14, weight: .black, design: .rounded))
                 }
@@ -53,7 +53,7 @@ struct CycleSummaryView: View {
                     Text("SUGGESTED TMS")
                         .font(.system(size: 8, weight: .bold))
                         .foregroundColor(.secondary)
-                    
+
                     TMRow(lift: .squat, old: profile.squatTM, new: $suggestedSquat)
                     TMRow(lift: .bench, old: profile.benchTM, new: $suggestedBench)
                     TMRow(lift: .deadlift, old: profile.deadliftTM, new: $suggestedDeadlift)
@@ -65,14 +65,14 @@ struct CycleSummaryView: View {
                     Text("NEXT CYCLE TEMPLATE")
                         .font(.system(size: 8, weight: .bold))
                         .foregroundColor(.secondary)
-                    
+
                     Picker("Template", selection: $selectedTemplate) {
                         ForEach(SupplementalTemplate.allCases, id: \.self) { template in
                             Text(template.shortName).tag(template)
                         }
                     }
                     .pickerStyle(.navigationLink)
-                    
+
                     NavigationLink(destination: AccessorySettingsView()) {
                         HStack {
                             Image(systemName: "slider.horizontal.3")
@@ -115,7 +115,7 @@ struct CycleSummaryView: View {
                     .font(.system(size: 8))
                     .foregroundColor(.secondary)
                     .strikethrough()
-                
+
                 Text("\(Int(new.wrappedValue))")
                     .font(.system(size: 12, weight: .black, design: .rounded))
                     .padding(.horizontal, 6)
@@ -138,13 +138,13 @@ struct CycleSummaryView: View {
 
     private func saveAndAdvance() {
         let templateChanged = (profile.selectedTemplate != selectedTemplate)
-        
+
         profile.squatTM = suggestedSquat
         profile.benchTM = suggestedBench
         profile.deadliftTM = suggestedDeadlift
         profile.ohpTM = suggestedOHP
         profile.selectedTemplate = selectedTemplate
-        
+
         if templateChanged {
             for acc in accessories {
                 modelContext.delete(acc)
@@ -159,7 +159,7 @@ struct CycleSummaryView: View {
 
         profile.currentWeek = 1
         profile.currentCycle += 1
-        
+
         try? modelContext.save()
         onComplete()
         dismiss()
