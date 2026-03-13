@@ -12,10 +12,7 @@ struct WorkoutActiveView: View {
     @Environment(\.dismiss) var dismiss
 
     @State private var selectedTab = 0
-    @State private var warmupSets: [WorkoutSet] = []
-    @State private var mainSets: [WorkoutSet] = []
-    @State private var fslSets: [WorkoutSet] = []
-    @State private var accessorySets: [WorkoutSet] = []
+    @State private var steps: [WorkoutStep] = []
 
     // Rest Timer State
     @State private var showRestTimer = false
@@ -32,82 +29,128 @@ struct WorkoutActiveView: View {
     @State private var finalAmrapReps = 0
     @State private var finalAmrapWeight = 0.0
 
+    struct WorkoutStep: Identifiable {
+        let id = UUID()
+        let title: String
+        let liftIcon: String?
+        var workoutSet: WorkoutSet
+        let totalSetsInPhase: Int
+        let setNumberInPhase: Int
+        let isAMRAP: Bool
+        let percentage: Int?
+    }
+
     var body: some View {
-        TabView(selection: $selectedTab) {
-            // Warmup
-            WorkoutPhaseView(title: "Warmup", sets: $warmupSets, selectedTab: $selectedTab, currentTab: 0, nextTab: 1, onRestStart: startRestTimer, onPlateCalc: { weight in selectedWeightForCalc = weight })
-                .tabItem { Text("Warmup") }
-                .tag(0)
-
-            // 5/3/1 Main Work
-            WorkoutPhaseView(title: "Main Lift", sets: $mainSets, selectedTab: $selectedTab, currentTab: 1, nextTab: 2, onRestStart: startRestTimer, onPlateCalc: { weight in selectedWeightForCalc = weight })
-                .tabItem { Text("Main") }
-                .tag(1)
-
-            // Supplemental
-            WorkoutPhaseView(title: profile.selectedTemplate.shortName, sets: $fslSets, selectedTab: $selectedTab, currentTab: 2, nextTab: 3, onRestStart: startRestTimer, onPlateCalc: { weight in selectedWeightForCalc = weight })
-                .tabItem { Text(profile.selectedTemplate.shortName) }
-                .tag(2)
-
-            // Accessories
-            WorkoutPhaseView(title: "Accessories", sets: $accessorySets, selectedTab: $selectedTab, currentTab: 3, nextTab: 4, onRestStart: startRestTimer, onPlateCalc: { _ in })
-                .tabItem { Text("Accessories") }
-                .tag(3)
-
-            // Finish
-            VStack(spacing: 12) {
-                if showCelebration {
-                    CelebrationView()
-                } else {
+        VStack(spacing: 0) {
+            // Header: Title & Progress
+            VStack(spacing: 2) {
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("CYCLE \(profile.currentCycle)")
+                            .font(.system(size: 8, weight: .black, design: .rounded))
+                            .foregroundColor(.white.opacity(0.6))
+                        Text(weekName(for: profile.currentWeek).uppercased())
+                            .font(.system(size: 10, weight: .heavy, design: .rounded))
+                            .foregroundColor(.accentColor)
+                    }
+                    
                     Spacer()
                     
-                    Image(systemName: "trophy.fill")
-                        .font(.system(size: 40))
-                        .foregroundStyle(.yellow.gradient)
-                    
-                    Text("Great Job!")
-                        .font(.system(.title2, design: .rounded, weight: .black))
-                    
-                    if workoutManager.running {
-                        Text(workoutManager.elapsedTimeString)
-                            .font(.system(.caption, design: .rounded, weight: .bold))
-                            .foregroundColor(.secondary)
+                    if selectedTab < steps.count {
+                        let step = steps[selectedTab]
+                        HStack(spacing: 4) {
+                            if let icon = step.liftIcon {
+                                Image(systemName: icon)
+                                    .font(.system(size: 10, weight: .black))
+                            }
+                            Text(step.title.uppercased())
+                                .font(.system(size: 12, weight: .black, design: .rounded))
+                        }
+                    } else {
+                        Text("SUMMARY")
+                            .font(.system(size: 12, weight: .black, design: .rounded))
                     }
+                }
+                .padding(.horizontal, 8)
+                .padding(.top, 2)
 
-                    Spacer()
-
-                    Button("Finish Workout") {
-                        showFinishConfirmation = true
-                    }
-                    .buttonStyle(.borderedProminent)
+                // Overall Workout Progress Bar
+                ProgressView(value: Double(completedStepsCount), total: Double(steps.count))
+                    .progressViewStyle(.linear)
                     .tint(.green)
-                    .accessibilityLabel("Finish and save this workout")
+                    .background(Color.white.opacity(0.15))
+                    .frame(height: 3)
+                    .clipShape(Capsule())
+                    .padding(.horizontal, 6)
+            }
+            .padding(.bottom, 4)
+            .background(Color.black.opacity(0.4))
+
+            TabView(selection: $selectedTab) {
+                ForEach(Array(steps.enumerated()), id: \.element.id) { index, step in
+                    WorkoutStepView(
+                        lift: lift,
+                        step: $steps[index],
+                        allSteps: steps,
+                        selectedTab: $selectedTab,
+                        nextTab: index + 1,
+                        onRestStart: startRestTimer,
+                        onPlateCalc: { weight in selectedWeightForCalc = weight }
+                    )
+                    .tag(index)
+                }
+
+                // Finish Tab
+                SummaryTab(
+                    workoutManager: workoutManager,
+                    profile: profile,
+                    totalWeight: totalWeightLifted,
+                    showCelebration: showCelebration,
+                    onFinish: { showFinishConfirmation = true }
+                )
+                .tag(steps.count)
+                .alert("Finish Workout?", isPresented: $showFinishConfirmation) {
+                    Button("Cancel", role: .cancel) { }
+                    Button("Finish", role: .destructive) {
+                        triggerCelebration()
+                    }
+                } message: {
+                    Text("This will save your session and advance your program.")
                 }
             }
-            .padding()
-            .tabItem { Text("Finish") }
-            .tag(4)
-            .alert("Finish Workout?", isPresented: $showFinishConfirmation) {
-                Button("Cancel", role: .cancel) { }
-                Button("Finish", role: .destructive) {
-                    triggerCelebration()
+            .tabViewStyle(.page(indexDisplayMode: .never))
+
+            // Real-time Stats Footer
+            HStack {
+                HStack(spacing: 2) {
+                    Image(systemName: "heart.fill")
+                        .foregroundColor(.red)
+                        .font(.system(size: 10))
+                    Text("\(Int(workoutManager.heartRate))")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                    Text("BPM")
+                        .font(.system(size: 7, weight: .bold))
+                        .foregroundColor(.secondary)
                 }
-            } message: {
-                Text("This will save your session and advance your program.")
+                
+                Spacer()
+                
+                HStack(spacing: 4) {
+                    Image(systemName: "timer")
+                        .foregroundColor(.purple)
+                        .font(.system(size: 10))
+                    Text(workoutManager.elapsedTimeString)
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                }
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+            .background(Color.black.opacity(0.3))
         }
-        .tabViewStyle(.page)
-        .navigationTitle(lift.name)
-        .navigationBarTitleDisplayMode(.inline)
         .containerBackground(lift.color.gradient, for: .navigation)
         .onAppear {
-            let sets = WorkoutCalculator.generateWorkout(for: lift, profile: profile, accessories: accessories)
-            warmupSets = sets.warmup
-            mainSets = sets.main
-            fslSets = sets.supplemental
-            accessorySets = sets.accessorySets
+            setupWorkout()
             workoutManager.startWorkout()
-            
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
         }
         .onDisappear {
@@ -117,8 +160,9 @@ struct WorkoutActiveView: View {
         }
         .overlay {
             if showRestTimer {
-                RestTimerView(timeRemaining: $restTimeRemaining, isPresented: $showRestTimer)
-                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                RestTimerView(timeRemaining: $restTimeRemaining, isPresented: $showRestTimer) {
+                    advanceTab()
+                }
             }
         }
         .sheet(item: Binding(
@@ -142,10 +186,98 @@ struct WorkoutActiveView: View {
         }
         .animation(.spring(), value: showRestTimer)
     }
+
+    private var completedStepsCount: Int {
+        steps.filter { $0.workoutSet.isCompleted }.count
+    }
+
+    private var totalWeightLifted: Double {
+        steps.map { $0.workoutSet }
+            .filter { $0.isCompleted }
+            .reduce(0) { $0 + ($1.weight * Double($1.completedReps)) }
+    }
+
+    private func setupWorkout() {
+        let sets = WorkoutCalculator.generateWorkout(for: lift, profile: profile, accessories: accessories)
+        let week = profile.currentWeek
+        
+        var newSteps: [WorkoutStep] = []
+        
+        // 1. Warmup
+        let warmupPercentages = [40, 50, 60]
+        for (index, set) in sets.warmup.enumerated() {
+            newSteps.append(WorkoutStep(title: "\(lift.name) Warmup", liftIcon: lift.symbolName, workoutSet: set, totalSetsInPhase: sets.warmup.count, setNumberInPhase: index + 1, isAMRAP: false, percentage: index < warmupPercentages.count ? warmupPercentages[index] : nil))
+        }
+        
+        // 2. Main
+        var mainPercentages: [Int] = []
+        switch week {
+        case 1: mainPercentages = [65, 75, 85]
+        case 2: mainPercentages = [70, 80, 90]
+        case 3: mainPercentages = [75, 85, 95]
+        default: mainPercentages = [40, 50, 60]
+        }
+        
+        for (index, set) in sets.main.enumerated() {
+            let isAmrap = set.reps.contains("+")
+            newSteps.append(WorkoutStep(title: lift.name, liftIcon: lift.symbolName, workoutSet: set, totalSetsInPhase: sets.main.count, setNumberInPhase: index + 1, isAMRAP: isAmrap, percentage: index < mainPercentages.count ? mainPercentages[index] : nil))
+        }
+        
+        // 3. Supplemental
+        var supplementalPercentage: Int = 0
+        switch profile.selectedTemplate {
+        case .bbb: supplementalPercentage = 50
+        case .ssl: 
+            switch week {
+            case 1: supplementalPercentage = 75
+            case 2: supplementalPercentage = 80
+            case 3: supplementalPercentage = 85
+            default: supplementalPercentage = 0
+            }
+        default: // FSL, BBS, Widow
+            switch week {
+            case 1: supplementalPercentage = 65
+            case 2: supplementalPercentage = 70
+            case 3: supplementalPercentage = 75
+            default: supplementalPercentage = 0
+            }
+        }
+        
+        for (index, set) in sets.supplemental.enumerated() {
+            newSteps.append(WorkoutStep(title: "\(lift.name) \(profile.selectedTemplate.shortName)", liftIcon: lift.symbolName, workoutSet: set, totalSetsInPhase: sets.supplemental.count, setNumberInPhase: index + 1, isAMRAP: false, percentage: supplementalPercentage > 0 ? supplementalPercentage : nil))
+        }
+        
+        // 4. Accessories
+        let groupedAccessories = Dictionary(grouping: sets.accessorySets, by: { $0.exerciseName })
+        for accessory in accessories where accessory.relatedLift == lift {
+            if let accSets = groupedAccessories[accessory.name] {
+                for (index, set) in accSets.enumerated() {
+                    newSteps.append(WorkoutStep(title: accessory.name, liftIcon: nil, workoutSet: set, totalSetsInPhase: accSets.count, setNumberInPhase: index + 1, isAMRAP: false, percentage: nil))
+                }
+            }
+        }
+        
+        self.steps = newSteps
+    }
     
-    struct WeightIdentifiable: Identifiable {
-        let id = UUID()
-        let weight: Double
+    private func weekName(for week: Int) -> String {
+        switch week {
+        case 1: return "5's Week"
+        case 2: return "3's Week"
+        case 3: return "5/3/1 Week"
+        case 4: return "Deload"
+        default: return "Training"
+        }
+    }
+
+    private func weekAbbreviation(for week: Int) -> String {
+        switch week {
+        case 1: return "5's"
+        case 2: return "3's"
+        case 3: return "5/3/1"
+        case 4: return "Deload"
+        default: return ""
+        }
     }
 
     private func startRestTimer() {
@@ -153,10 +285,9 @@ struct WorkoutActiveView: View {
         restTimeRemaining = 90
         WKInterfaceDevice.current().play(.start)
 
-        // Schedule background notification
         let content = UNMutableNotificationContent()
         content.title = "Rest Over"
-        content.body = "Back to the bar! Next set is ready."
+        content.body = "Back to the bar!"
         content.sound = .default
         
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 90, repeats: false)
@@ -167,7 +298,7 @@ struct WorkoutActiveView: View {
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             if restTimeRemaining > 0 {
                 restTimeRemaining -= 1
-                if restTimeRemaining == 3 || restTimeRemaining == 2 || restTimeRemaining == 1 {
+                if restTimeRemaining <= 3 {
                     WKInterfaceDevice.current().play(.directionUp)
                 }
             } else {
@@ -175,6 +306,16 @@ struct WorkoutActiveView: View {
                 timer?.invalidate()
                 WKInterfaceDevice.current().play(.success)
                 UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["restTimer"])
+                advanceTab()
+            }
+        }
+    }
+    
+    private func advanceTab() {
+        if selectedTab < steps.count {
+            WKInterfaceDevice.current().play(.directionUp)
+            withAnimation(.spring()) {
+                selectedTab += 1
             }
         }
     }
@@ -185,7 +326,6 @@ struct WorkoutActiveView: View {
         }
         WKInterfaceDevice.current().play(.notification)
         
-        // Auto-save and dismiss after celebration
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
             finishWorkout()
         }
@@ -194,9 +334,9 @@ struct WorkoutActiveView: View {
     private func finishWorkout() {
         workoutManager.endWorkout()
 
-        let amrapSet = mainSets.last { $0.reps.contains("+") && $0.isCompleted }
-        let actualReps = amrapSet?.actualReps ?? 0
-        let weight = amrapSet?.weight ?? 0
+        let amrapStep = steps.last { $0.title == lift.name && $0.workoutSet.reps.contains("+") && $0.workoutSet.isCompleted }
+        let actualReps = amrapStep?.workoutSet.actualReps ?? 0
+        let weight = amrapStep?.workoutSet.weight ?? 0
 
         let session = WorkoutSession(
             mainLift: lift,
@@ -208,39 +348,122 @@ struct WorkoutActiveView: View {
         )
         modelContext.insert(session)
 
-        let isFourWeek = profile.usesFourWeekCycle
-        let maxWeek = isFourWeek ? 4 : 3
-
+        let maxWeek = profile.usesFourWeekCycle ? 4 : 3
         if lift == .ohp && profile.currentWeek == maxWeek {
-            // Cycle end! Show summary instead of automatic jump
             finalAmrapReps = actualReps
             finalAmrapWeight = weight
             showCycleSummary = true
-            // Save current session first so it's in history
             try? modelContext.save()
-            return // Don't dismiss yet, wait for summary confirm
+            return
         }
         
         if lift == .ohp {
             if profile.currentWeek < maxWeek {
                 profile.currentWeek += 1
             } else {
-                // Fallback / legacy path if summary isn't used
                 profile.currentWeek = 1
                 profile.currentCycle += 1
             }
         }
 
-        do {
-            try modelContext.save()
-        } catch {
-            print("Failed to save workout: \(error.localizedDescription)")
-        }
+        try? modelContext.save()
         dismiss()
     }
 }
 
-// MARK: - Celebration View
+// MARK: - Subviews & Helpers
+
+struct WeightIdentifiable: Identifiable {
+    let id = UUID()
+    let weight: Double
+}
+
+struct SummaryTab: View {
+    @ObservedObject var workoutManager: WorkoutManager
+    let profile: UserProfile
+    let totalWeight: Double
+    let showCelebration: Bool
+    let onFinish: () -> Void
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 12) {
+                if showCelebration {
+                    CelebrationView()
+                        .frame(height: 160)
+                } else {
+                    VStack(spacing: 4) {
+                        Image(systemName: "trophy.fill")
+                            .font(.system(size: 26))
+                            .foregroundStyle(.yellow.gradient)
+                        
+                        Text("GREAT JOB!")
+                            .font(.system(size: 16, weight: .black, design: .rounded))
+                        
+                        Text("Cycle \(profile.currentCycle), Week \(profile.currentWeek)")
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.top, 4)
+                    
+                    VStack(spacing: 6) {
+                        SummaryStatRow(label: "ENERGY", value: "\(Int(workoutManager.activeEnergy))", unit: "kcal", icon: "flame.fill", color: .orange)
+                        SummaryStatRow(label: "HEART RATE", value: "\(Int(workoutManager.heartRate))", unit: "bpm", icon: "heart.fill", color: .red)
+                        SummaryStatRow(label: "TOTAL LIFTED", value: "\(Int(totalWeight))", unit: profile.weightUnit.label, icon: "dumbbell.fill", color: .blue)
+                        SummaryStatRow(label: "TIME", value: workoutManager.elapsedTimeString, unit: "", icon: "timer", color: .purple)
+                    }
+                    .padding(.horizontal, 4)
+
+                    Button(action: onFinish) {
+                        Text("FINISH")
+                            .font(.system(size: 14, weight: .black, design: .rounded))
+                            .frame(maxWidth: .infinity, minHeight: 40)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.green)
+                    .padding(.top, 4)
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+}
+
+struct SummaryStatRow: View {
+    let label: String
+    let value: String
+    let unit: String
+    let icon: String
+    let color: Color
+
+    var body: some View {
+        HStack {
+            Image(systemName: icon)
+                .foregroundColor(color)
+                .font(.system(size: 12))
+                .frame(width: 20)
+            
+            Text(label)
+                .font(.system(size: 8, weight: .bold))
+                .foregroundColor(.secondary)
+            
+            Spacer()
+            
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Text(value)
+                    .font(.system(size: 16, weight: .black, design: .rounded))
+                Text(unit)
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
+        .padding(.horizontal, 10)
+        .background(Color.white.opacity(0.05))
+        .cornerRadius(8)
+    }
+}
+
 struct CelebrationView: View {
     @State private var particles: [ConfettiParticle] = []
     @State private var showText = false
@@ -264,233 +487,435 @@ struct CelebrationView: View {
                     .position(x: p.x, y: p.y)
                     .opacity(p.opacity)
             }
-
-            VStack(spacing: 8) {
-                Text("🏋️")
-                    .font(.system(size: 44))
-                    .scaleEffect(showText ? 1.0 : 0.3)
-
-                Text("CRUSHED IT!")
-                    .font(.system(.title3, design: .rounded, weight: .black))
-                    .foregroundColor(.white)
-                    .scaleEffect(showText ? 1.0 : 0.5)
-                    .opacity(showText ? 1.0 : 0.0)
-
-                Text("Saving workout...")
-                    .font(.system(.caption2, design: .rounded, weight: .bold))
-                    .foregroundColor(.secondary)
-                    .opacity(showText ? 1.0 : 0.0)
+            VStack(spacing: 4) {
+                Text("🏋️").font(.system(size: 30))
+                Text("SAVED").font(.system(size: 14, weight: .black, design: .rounded))
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             spawnConfetti()
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.5)) {
-                showText = true
-            }
+            showText = true
         }
     }
 
     private func spawnConfetti() {
-        let symbols = ["⭐️", "💪", "🔥", "✨", "🎉", "💥"]
-        let colors: [Color] = [.orange, .blue, .green, .purple, .yellow, .red]
-
-        for i in 0..<18 {
-            let startX = CGFloat.random(in: 20...170)
-            let startY: CGFloat = -10
-            let endY = CGFloat.random(in: 40...180)
-
-            let particle = ConfettiParticle(
-                x: startX,
-                y: startY,
-                color: colors[i % colors.count],
-                symbol: symbols[i % symbols.count],
-                size: CGFloat.random(in: 10...18)
-            )
-            particles.append(particle)
-
+        let symbols = ["💪", "🔥", "✨", "🎉"]
+        let colors: [Color] = [.orange, .blue, .green, .purple]
+        for i in 0..<12 {
+            particles.append(ConfettiParticle(
+                x: CGFloat.random(in: 20...160),
+                y: -10,
+                color: colors.randomElement()!,
+                symbol: symbols.randomElement()!,
+                size: 12
+            ))
             let index = particles.count - 1
-            withAnimation(.interpolatingSpring(stiffness: 30, damping: 6).delay(Double(i) * 0.05)) {
-                particles[index].y = endY
-            }
-            withAnimation(.easeOut(duration: 0.5).delay(1.8 + Double(i) * 0.02)) {
-                particles[index].opacity = 0
+            withAnimation(.interpolatingSpring(stiffness: 30, damping: 6).delay(Double(i)*0.1)) {
+                particles[index].y = CGFloat.random(in: 40...140)
             }
         }
     }
 }
 
-// MARK: - Workout Phase View
-struct WorkoutPhaseView: View {
-    let title: String
-    @Binding var sets: [WorkoutSet]
+struct WorkoutStepView: View {
+    let lift: MainLift
+    @Binding var step: WorkoutActiveView.WorkoutStep
+    let allSteps: [WorkoutActiveView.WorkoutStep]
     @Binding var selectedTab: Int
-    let currentTab: Int
     let nextTab: Int
     var onRestStart: () -> Void
     var onPlateCalc: (Double) -> Void
 
     @EnvironmentObject var workoutManager: WorkoutManager
+    @Query(sort: \WorkoutSession.date, order: .reverse) private var workoutSessions: [WorkoutSession]
 
     var body: some View {
-        VStack {
-            Text(title)
-                .font(.system(.title2, design: .rounded, weight: .black))
-                .padding(.bottom, 4)
-
-            if workoutManager.running {
-                HStack(spacing: 12) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "heart.fill").foregroundStyle(.red)
-                        Text(String(format: "%.0f", workoutManager.heartRate))
+        VStack(spacing: 2) {
+            Spacer(minLength: 0)
+            
+            if let icon = step.liftIcon {
+                Image(systemName: icon)
+                    .font(.system(size: 28, weight: .black))
+                    .foregroundStyle(lift.color.gradient)
+                    .padding(.bottom, 2)
+            }
+            
+            // PR Goal Badge
+            if step.isAMRAP {
+                if let prReps = calculateRepsToBeatPR() {
+                    HStack(spacing: 4) {
+                        Image(systemName: "crown.fill")
+                        Text("GOAL: \(prReps) REPS")
                     }
-                    HStack(spacing: 3) {
-                        Image(systemName: "timer").foregroundStyle(.secondary)
-                        Text(workoutManager.elapsedTimeString)
-                    }
+                    .font(.system(size: 9, weight: .black, design: .rounded))
+                    .foregroundColor(.yellow)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.yellow.opacity(0.15))
+                    .cornerRadius(4)
+                    .padding(.bottom, 2)
                 }
-                .font(.system(.caption2, design: .rounded, weight: .bold))
-                .foregroundColor(.secondary)
-                .padding(.bottom, 4)
-                .accessibilityLabel("Heart rate: \(Int(workoutManager.heartRate)) BPM. Duration: \(workoutManager.elapsedTimeString)")
+            } else if let pct = step.percentage {
+                Text("\(pct)%")
+                    .font(.system(size: 10, weight: .black, design: .rounded))
+                    .foregroundColor(.white.opacity(0.4))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
+                    .padding(.bottom, 2)
             }
 
-            ScrollView {
-                VStack(spacing: 8) {
-                    ForEach($sets) { $workoutSet in
-                        SetRowView(workoutSet: $workoutSet, onComplete: onRestStart, onPlateCalc: { onPlateCalc(workoutSet.weight) })
+            SetRowView(workoutSet: $step.workoutSet, isAMRAP: step.isAMRAP, onComplete: onRestStart, onPlateCalc: { onPlateCalc(step.workoutSet.weight) })
+                .padding(.horizontal, 4)
+
+            Spacer(minLength: 0)
+
+            // Unified Progress Component and Skip Button
+            HStack(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: 4) {
+                    let currentPhaseSteps = allSteps.filter { $0.title == step.title }
+                    let currentIdx = currentPhaseSteps.firstIndex(where: { $0.id == step.id }) ?? 0
+                    
+                    Text("\(currentIdx + 1)/\(currentPhaseSteps.count) SET")
+                        .font(.system(size: 9, weight: .black, design: .rounded))
+                        .foregroundColor(.white.opacity(0.5))
+                    
+                    HStack(spacing: 4) {
+                        ForEach(0..<currentPhaseSteps.count, id: \.self) { i in
+                            let s = currentPhaseSteps[i]
+                            let isCurrent = (s.id == step.id)
+                            let isCompleted = s.workoutSet.isCompleted
+                            
+                            Capsule()
+                                .fill(isCurrent ? .white : (isCompleted ? .green : .white.opacity(0.15)))
+                                .frame(width: isCurrent ? 12 : 6, height: 3)
+                                .animation(.spring(), value: isCurrent)
+                        }
                     }
                 }
-            }
-
-            Spacer()
-
-            HStack(spacing: 20) {
-                Button("Skip Phase") {
-                    withAnimation {
-                        // Mark all uncompleted sets as not happening, then move on.
-                        // For the purpose of the UI, skipping just moves past them.
-                        selectedTab = nextTab
-                    }
-                }
-                .buttonStyle(.bordered)
-                .tint(.secondary)
-                .accessibilityLabel("Skip this phase")
                 
-                Button("Next") {
-                    withAnimation {
-                        selectedTab = nextTab
-                    }
+                Spacer()
+                
+                Button(action: {
+                    withAnimation { selectedTab = nextTab }
+                }) {
+                    Text("SKIP")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(.white.opacity(0.4))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
                 }
-                .buttonStyle(.borderedProminent)
-                .accessibilityLabel("Go to next phase")
+                .buttonStyle(.plain)
             }
-            .padding(.top, 8)
+            .padding(.bottom, 6)
+            .padding(.horizontal, 2)
         }
-        .padding()
+    }
+
+    private func calculateRepsToBeatPR() -> Int? {
+        let liftSessions = workoutSessions.filter { $0.mainLift == lift && $0.isCompleted }
+        let currentBestE1RM = liftSessions.map { $0.estimated1RM }.max() ?? 0
+        
+        if currentBestE1RM == 0 { return nil }
+        
+        let weight = step.workoutSet.weight
+        if weight == 0 { return nil }
+        
+        // Epley: e1RM = W * (1 + 0.0333 * R)
+        // R = (e1RM / W - 1) / 0.0333
+        let neededReps = (currentBestE1RM / weight - 1) / 0.0333
+        let target = Int(ceil(neededReps))
+        return max(target, 1)
     }
 }
 
-// MARK: - Set Row View
+struct ParticleBurstView: View {
+    @State private var particles: [Particle] = []
+    
+    struct Particle: Identifiable {
+        let id = UUID()
+        var x: CGFloat
+        var y: CGFloat
+        var scale: CGFloat
+        var opacity: Double
+        var speedX: CGFloat
+        var speedY: CGFloat
+        let color: Color
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                ForEach(particles) { p in
+                    Circle()
+                        .fill(p.color)
+                        .frame(width: 4, height: 4)
+                        .scaleEffect(p.scale)
+                        .opacity(p.opacity)
+                        .position(x: p.x, y: p.y)
+                }
+            }
+            .onAppear {
+                let center = CGPoint(x: geo.size.width/2, y: geo.size.height/2)
+                for _ in 0..<12 {
+                    let angle = Double.random(in: 0..<2 * .pi)
+                    let speed = CGFloat.random(in: 10...30)
+                    particles.append(Particle(
+                        x: center.x,
+                        y: center.y,
+                        scale: CGFloat.random(in: 0.5...1.0),
+                        opacity: 1,
+                        speedX: cos(angle) * speed,
+                        speedY: sin(angle) * speed,
+                        color: [.green, .mint, .white].randomElement()!
+                    ))
+                }
+                
+                withAnimation(.easeOut(duration: 0.6)) {
+                    for i in particles.indices {
+                        particles[i].x += particles[i].speedX
+                        particles[i].y += particles[i].speedY
+                        particles[i].scale = 0
+                        particles[i].opacity = 0
+                    }
+                }
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 struct SetRowView: View {
     @Binding var workoutSet: WorkoutSet
+    let isAMRAP: Bool
     var onComplete: () -> Void
     var onPlateCalc: () -> Void
     
     @FocusState private var isRepFieldFocused: Bool
+    @State private var scale: CGFloat = 1.0
+    @State private var showParticles = false
+    @State private var showAmrapSheet = false
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                if workoutSet.type == .accessory {
-                    VStack(alignment: .leading, spacing: 2) {
-                        if workoutSet.weight > 0 {
-                            Button(action: onPlateCalc) {
-                                Text("\(String(format: "%.1f", workoutSet.weight))")
-                                    .font(.system(.headline, design: .rounded, weight: .black))
-                                    .foregroundStyle(workoutSet.isCompleted ? .secondary : .primary)
-                            }
-                            .buttonStyle(.plain)
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 0) {
+                Button(action: onPlateCalc) {
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        Text("\(String(format: "%.1f", workoutSet.weight))")
+                            .font(.system(size: 26, weight: .black, design: .rounded))
+                        Text("kg")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.secondary)
+                    }
+                    .foregroundStyle(workoutSet.isCompleted ? .secondary : .primary)
+                }
+                .buttonStyle(.plain)
+                
+                if isAMRAP {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("AMRAP")
+                            .font(.system(size: 16, weight: .black, design: .rounded))
+                            .foregroundColor(.orange)
+                        
+                        if workoutSet.isCompleted {
+                            Text("\(workoutSet.actualReps) REPS")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.secondary)
                         }
-                        Text(workoutSet.reps)
-                            .font(.system(.caption, design: .rounded, weight: .bold))
-                            .foregroundStyle(workoutSet.isCompleted ? .secondary : .primary)
                     }
                 } else {
-                    Button(action: onPlateCalc) {
-                        Text("\(String(format: "%.1f", workoutSet.weight))")
-                            .font(.system(.title2, design: .rounded, weight: .black))
-                            .foregroundStyle(workoutSet.isCompleted ? .secondary : .primary)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("\(String(format: "%.1f", workoutSet.weight)). Tap for plate calculator.")
-                    
-                    if workoutSet.reps.contains("+") {
-                        HStack(spacing: 6) {
-                            Text("REPS")
-                                .font(.system(size: 10, weight: .bold, design: .rounded))
-                                .foregroundStyle(.secondary)
-                            
-                            Text("\(workoutSet.actualReps)")
-                                .font(.system(.title3, design: .rounded, weight: .black))
-                                .foregroundStyle(isRepFieldFocused ? .black : .accentColor)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 4)
-                                .background(isRepFieldFocused ? Color.accentColor : Color.white.opacity(0.1))
-                                .clipShape(Capsule())
-                                .focusable()
-                                .focused($isRepFieldFocused)
-                                .digitalCrownRotation($workoutSet.actualReps.toDouble(), from: 0, through: 50, by: 1, sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
-                                .accessibilityLabel("AMRAP reps: \(workoutSet.actualReps). Use Digital Crown to adjust.")
-                        }
-                    } else {
-                        Text("\(workoutSet.reps) Reps")
-                            .font(.system(.subheadline, design: .rounded, weight: .bold))
-                            .foregroundColor(workoutSet.isCompleted ? .secondary.opacity(0.5) : .secondary)
-                    }
+                    Text("\(workoutSet.reps) REPS")
+                        .font(.system(size: 16, weight: .black, design: .rounded))
+                        .foregroundColor(.secondary)
                 }
             }
+            
             Spacer()
 
             Button(action: {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                    if !workoutSet.isCompleted {
-                        if workoutSet.reps.contains("+") && workoutSet.actualReps == 0 {
-                            let target = Int(workoutSet.reps.replacingOccurrences(of: "+", with: "")) ?? 0
-                            workoutSet.actualReps = target
-                        }
-                        WKInterfaceDevice.current().play(.success)
-                        onComplete()
-                    } else {
-                        WKInterfaceDevice.current().play(.click)
-                    }
-                    workoutSet.isCompleted.toggle()
-                }
+                handleCompletion()
             }) {
                 ZStack {
+                    // 1. Background Track
                     Circle()
-                        .fill(workoutSet.isCompleted ? Color.green : Color.white.opacity(0.1))
-                        .frame(width: 48, height: 48)
-                        .shadow(color: workoutSet.isCompleted ? Color.green.opacity(0.4) : .clear, radius: 4, x: 0, y: 2)
+                        .stroke(Color.white.opacity(0.15), lineWidth: 4)
+                        .background(Circle().fill(Color.white.opacity(0.05)))
                     
-                    Image(systemName: workoutSet.isCompleted ? "checkmark" : "circle")
-                        .font(.system(size: 20, weight: .heavy))
-                        .foregroundColor(workoutSet.isCompleted ? .black : .white.opacity(0.5))
+                    // 2. Filling Animation
+                    Circle()
+                        .fill(Color.green)
+                        .scaleEffect(workoutSet.isCompleted ? 1.0 : 0.001)
+                        .opacity(workoutSet.isCompleted ? 1.0 : 0.0)
+                        .animation(.spring(response: 0.4, dampingFraction: 0.6), value: workoutSet.isCompleted)
+                    
+                    // 3. Checkmark
+                    if workoutSet.isCompleted {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 22, weight: .black))
+                            .foregroundColor(.black)
+                            .transition(.scale.combined(with: .opacity))
+                    }
+                    
+                    // 4. Particles
+                    if showParticles {
+                        ParticleBurstView()
+                    }
                 }
+                .frame(width: 44, height: 44)
+                .scaleEffect(scale)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(workoutSet.isCompleted ? "Mark set as not done" : "Mark set as done")
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
-        .background(Material.thinMaterial)
-        .cornerRadius(20)
-        .opacity(workoutSet.isCompleted ? 0.6 : 1.0)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.05))
+        )
+        .sheet(isPresented: $showAmrapSheet) {
+            AmrapInputView(reps: $workoutSet.actualReps) {
+                showAmrapSheet = false
+                if workoutSet.actualReps == 0 {
+                    workoutSet.actualReps = Int(workoutSet.reps.replacingOccurrences(of: "+", with: "")) ?? 0
+                }
+                markCompleted()
+            }
+        }
+    }
+
+    private func handleCompletion() {
+        if !workoutSet.isCompleted {
+            if isAMRAP {
+                showAmrapSheet = true
+            } else {
+                markCompleted()
+            }
+        } else {
+            WKInterfaceDevice.current().play(.directionDown)
+            withAnimation(.spring()) {
+                workoutSet.isCompleted = false
+                showParticles = false
+            }
+        }
+    }
+
+    private func markCompleted() {
+        WKInterfaceDevice.current().play(.success)
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+            scale = 0.9
+            workoutSet.isCompleted = true
+            showParticles = true
+            onComplete()
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { scale = 1.0 }
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            showParticles = false
+        }
     }
 }
 
-// MARK: - Helpers
-extension Binding where Value == Int {
+struct AmrapInputView: View {
+    @Binding var reps: Int
+    var onDone: () -> Void
+    @FocusState private var isFocused: Bool
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            Text("How many reps?")
+                .font(.system(size: 14, weight: .black, design: .rounded))
+            
+            HStack(spacing: 4) {
+                Text("\(reps)")
+                    .font(.system(size: 40, weight: .black, design: .rounded))
+                    .foregroundColor(isFocused ? .black : .accentColor)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(isFocused ? Color.accentColor : Color.white.opacity(0.1))
+                    .cornerRadius(12)
+                    .focusable()
+                    .focused($isFocused)
+                    .digitalCrownRotation($reps.toDouble(), from: 0, through: 50, by: 1, sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
+                
+                Text("REPS")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.secondary)
+            }
+            
+            Button("Done") {
+                onDone()
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.green)
+        }
+        .onAppear {
+            isFocused = true
+        }
+    }
+}
+
+struct RestTimerView: View {
+    @Binding var timeRemaining: Int
+    @Binding var isPresented: Bool
+    var onDismiss: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.9).ignoresSafeArea()
+            
+            VStack(spacing: 12) {
+                Text("REST")
+                    .font(.system(.footnote, design: .rounded, weight: .black))
+                    .foregroundColor(.accentColor)
+                    .kerning(2.0)
+                
+                ZStack {
+                    Circle()
+                        .stroke(Color.white.opacity(0.1), lineWidth: 8)
+                    Circle()
+                        .trim(from: 0, to: Double(timeRemaining) / 90.0)
+                        .stroke(Color.green, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                        .animation(.linear(duration: 1.0), value: timeRemaining)
+                    
+                    VStack(spacing: -4) {
+                        Text("\(timeRemaining)")
+                            .font(.system(size: 44, weight: .black, design: .rounded))
+                            .contentTransition(.numericText())
+                        Text("SEC")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .frame(width: 100, height: 100)
+
+                Button(action: {
+                    withAnimation {
+                        isPresented = false
+                        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["restTimer"])
+                        onDismiss()
+                    }
+                }) {
+                    HStack {
+                        Image(systemName: "forward.fill")
+                        Text("SKIP")
+                    }
+                    .font(.system(size: 12, weight: .black, design: .rounded))
+                    .frame(width: 90, height: 36)
+                    .background(Capsule().fill(Color.white.opacity(0.15)))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+}
+
+private extension Binding where Value == Int {
     func toDouble() -> Binding<Double> {
         return Binding<Double>(
             get: { Double(self.wrappedValue) },
@@ -499,54 +924,10 @@ extension Binding where Value == Int {
     }
 }
 
-// MARK: - Rest Timer View
-struct RestTimerView: View {
-    @Binding var timeRemaining: Int
-    @Binding var isPresented: Bool
-
-    var body: some View {
-        VStack(spacing: 20) {
-            Text("REST")
-                .font(.system(.footnote, design: .rounded, weight: .black))
-                .foregroundColor(.secondary)
-                .kerning(2.0)
-            
-            ZStack {
-                Circle()
-                    .stroke(Color.white.opacity(0.1), lineWidth: 12)
-                Circle()
-                    .trim(from: 0, to: Double(timeRemaining) / 90.0)
-                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 12, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                    .animation(.linear(duration: 1.0), value: timeRemaining)
-                
-                Text("\(timeRemaining)")
-                    .font(.system(size: 50, weight: .black, design: .rounded))
-                    .contentTransition(.numericText())
-                    .animation(.snappy, value: timeRemaining)
-            }
-            .frame(width: 120, height: 120)
-            .accessibilityLabel("Rest timer: \(timeRemaining) seconds remaining")
-
-            Button(action: {
-                withAnimation {
-                    isPresented = false
-                    UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["restTimer"])
-                }
-            }) {
-                Text("SKIP")
-                    .font(.system(.body, design: .rounded, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(width: 100, height: 40)
-                    .background(Capsule().fill(Color.white.opacity(0.2)))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Skip rest timer")
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.black.opacity(0.85))
-        .background(Material.ultraThin)
-        .ignoresSafeArea()
+extension WorkoutSet {
+    var completedReps: Int {
+        if actualReps > 0 { return actualReps }
+        return Int(reps.replacingOccurrences(of: "+", with: "")) ?? 0
     }
 }
 

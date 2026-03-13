@@ -5,6 +5,8 @@ struct CycleSummaryView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) var dismiss
     
+    @Query private var accessories: [AccessoryExercise]
+    
     let profile: UserProfile
     let lastLift: MainLift
     let amrapReps: Int
@@ -15,46 +17,77 @@ struct CycleSummaryView: View {
     @State private var suggestedBench: Double = 0
     @State private var suggestedDeadlift: Double = 0
     @State private var suggestedOHP: Double = 0
+    @State private var selectedTemplate: SupplementalTemplate = .fsl
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 16) {
-                VStack(spacing: 4) {
+            VStack(spacing: 12) {
+                VStack(spacing: 2) {
                     Text("CYCLE \(profile.currentCycle) COMPLETE")
-                        .font(.system(.footnote, design: .rounded, weight: .black))
+                        .font(.system(size: 8, weight: .bold, design: .rounded))
                         .foregroundColor(.accentColor)
                     
-                    Text("Auto-Regulation")
-                        .font(.system(.title3, design: .rounded, weight: .black))
+                    Text("AUTO-REGULATION")
+                        .font(.system(size: 14, weight: .black, design: .rounded))
                 }
-                .padding(.top, 8)
+                .padding(.top, 4)
 
                 if amrapReps > 0 {
-                    VStack(spacing: 2) {
-                        Text("LAST SESSION")
-                            .font(.system(size: 8, weight: .bold))
-                            .foregroundColor(.secondary)
-                        Text("\(lastLift.name): \(amrapReps) reps @ \(String(format: "%.1f", amrapWeight))")
-                            .font(.system(size: 10, weight: .medium))
+                    HStack(spacing: 8) {
+                        Image(systemName: lastLift.symbolName)
+                            .foregroundColor(lastLift.color)
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("LAST AMRAP")
+                                .font(.system(size: 6, weight: .bold))
+                                .foregroundColor(.secondary)
+                            Text("\(amrapReps) × \(Int(amrapWeight)) kg")
+                                .font(.system(size: 12, weight: .black, design: .rounded))
+                        }
                     }
-                    .padding(8)
-                    .background(Color.white.opacity(0.1))
+                    .padding(6)
+                    .background(Color.white.opacity(0.05))
                     .cornerRadius(8)
                 }
 
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text("SUGGESTED TMS")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 8, weight: .bold))
                         .foregroundColor(.secondary)
                     
-                    TMRow(name: "Squat", old: profile.squatTM, new: $suggestedSquat, color: .orange)
-                    TMRow(name: "Bench", old: profile.benchTM, new: $suggestedBench, color: .blue)
-                    TMRow(name: "Deadlift", old: profile.deadliftTM, new: $suggestedDeadlift, color: .green)
-                    TMRow(name: "OHP", old: profile.ohpTM, new: $suggestedOHP, color: .purple)
+                    TMRow(lift: .squat, old: profile.squatTM, new: $suggestedSquat)
+                    TMRow(lift: .bench, old: profile.benchTM, new: $suggestedBench)
+                    TMRow(lift: .deadlift, old: profile.deadliftTM, new: $suggestedDeadlift)
+                    TMRow(lift: .ohp, old: profile.ohpTM, new: $suggestedOHP)
                 }
-                .padding(.horizontal, 8)
+                .padding(.horizontal, 4)
 
-                Button("Confirm & Advance") {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("NEXT CYCLE TEMPLATE")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundColor(.secondary)
+                    
+                    Picker("Template", selection: $selectedTemplate) {
+                        ForEach(SupplementalTemplate.allCases, id: \.self) { template in
+                            Text(template.shortName).tag(template)
+                        }
+                    }
+                    .pickerStyle(.navigationLink)
+                    
+                    NavigationLink(destination: AccessorySettingsView()) {
+                        HStack {
+                            Image(systemName: "slider.horizontal.3")
+                            Text("Customise Accessories")
+                        }
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .frame(maxWidth: .infinity, minHeight: 32)
+                        .background(Color.white.opacity(0.1))
+                        .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 4)
+
+                Button("CONFIRM & START") {
                     saveAndAdvance()
                 }
                 .buttonStyle(.borderedProminent)
@@ -65,30 +98,30 @@ struct CycleSummaryView: View {
         .containerBackground(Color.black.gradient, for: .navigation)
         .onAppear {
             calculateSuggestions()
+            selectedTemplate = profile.selectedTemplate
         }
     }
 
-    private func TMRow(name: String, old: Double, new: Binding<Double>, color: Color) -> some View {
+    private func TMRow(lift: MainLift, old: Double, new: Binding<Double>) -> some View {
         HStack {
-            Text(name)
-                .font(.system(.caption2, design: .rounded, weight: .bold))
-                .foregroundColor(color)
+            Image(systemName: lift.symbolName)
+                .font(.system(size: 10))
+                .foregroundColor(lift.color)
+            Text(lift.name)
+                .font(.system(size: 10, weight: .bold, design: .rounded))
             Spacer()
-            HStack(spacing: 6) {
+            HStack(spacing: 4) {
                 Text("\(Int(old))")
+                    .font(.system(size: 8))
                     .foregroundColor(.secondary)
                     .strikethrough()
                 
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 8))
-                    .foregroundColor(.secondary)
-                
                 Text("\(Int(new.wrappedValue))")
-                    .font(.system(size: 14, weight: .black, design: .rounded))
-                    .padding(.horizontal, 8)
+                    .font(.system(size: 12, weight: .black, design: .rounded))
+                    .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color.accentColor.opacity(0.15))
-                    .cornerRadius(6)
+                    .background(lift.color.opacity(0.15))
+                    .cornerRadius(4)
                     .focusable()
                     .digitalCrownRotation(new, from: 0, through: 1000, by: profile.weightUnit.roundTo, sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
             }
@@ -96,12 +129,7 @@ struct CycleSummaryView: View {
     }
 
     private func calculateSuggestions() {
-        // We use the last session's performance to guide the jump
-        // In a real 5/3/1 program, you usually increase regardless, but 
-        // Auto-regulation can double the jump if performance was stellar.
-        
         let unit = profile.weightUnit
-        
         suggestedSquat = profile.squatTM + WorkoutCalculator.calculateSuggestedIncrease(lift: .squat, currentTM: profile.squatTM, amrapWeight: amrapWeight, amrapReps: amrapReps, unit: unit)
         suggestedBench = profile.benchTM + WorkoutCalculator.calculateSuggestedIncrease(lift: .bench, currentTM: profile.benchTM, amrapWeight: amrapWeight, amrapReps: amrapReps, unit: unit)
         suggestedDeadlift = profile.deadliftTM + WorkoutCalculator.calculateSuggestedIncrease(lift: .deadlift, currentTM: profile.deadliftTM, amrapWeight: amrapWeight, amrapReps: amrapReps, unit: unit)
@@ -109,14 +137,30 @@ struct CycleSummaryView: View {
     }
 
     private func saveAndAdvance() {
+        let templateChanged = (profile.selectedTemplate != selectedTemplate)
+        
         profile.squatTM = suggestedSquat
         profile.benchTM = suggestedBench
         profile.deadliftTM = suggestedDeadlift
         profile.ohpTM = suggestedOHP
+        profile.selectedTemplate = selectedTemplate
         
+        if templateChanged {
+            for acc in accessories {
+                modelContext.delete(acc)
+            }
+            for lift in MainLift.allCases {
+                let defaults = selectedTemplate.defaultAccessories(for: lift)
+                for acc in defaults {
+                    modelContext.insert(acc)
+                }
+            }
+        }
+
         profile.currentWeek = 1
         profile.currentCycle += 1
         
+        try? modelContext.save()
         onComplete()
         dismiss()
     }

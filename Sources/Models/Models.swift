@@ -56,7 +56,6 @@ enum WeightUnit: Int, Codable, CaseIterable {
         }
     }
 
-    /// Rounding increment for plate math
     var roundTo: Double {
         switch self {
         case .lbs: return 5.0
@@ -64,7 +63,6 @@ enum WeightUnit: Int, Codable, CaseIterable {
         }
     }
 
-    /// Default TM progression per cycle
     var upperIncrement: Double {
         switch self {
         case .lbs: return 5.0
@@ -138,15 +136,61 @@ enum MainLift: Int, Codable, CaseIterable {
         default: return false
         }
     }
+
+    var symbolName: String {
+        switch self {
+        case .squat: return "figure.squat"
+        case .bench: return "figure.bench.press"
+        case .deadlift: return "figure.deadlift"
+        case .ohp: return "figure.arms.up"
+        }
+    }
+}
+
+extension SupplementalTemplate {
+    func defaultAccessories(for lift: MainLift) -> [AccessoryExercise] {
+        switch self {
+        case .bbb:
+            switch lift {
+            case .squat: return [AccessoryExercise(name: "Leg Curls", targetSets: 5, targetReps: 10, weight: 0, relatedLift: .squat)]
+            case .bench: return [AccessoryExercise(name: "DB Rows", targetSets: 5, targetReps: 10, weight: 0, relatedLift: .bench)]
+            case .deadlift: return [AccessoryExercise(name: "Hanging Leg Raises", targetSets: 5, targetReps: 10, weight: 0, relatedLift: .deadlift)]
+            case .ohp: return [AccessoryExercise(name: "Pull-ups", targetSets: 5, targetReps: 10, weight: 0, relatedLift: .ohp)]
+            }
+        default:
+            switch lift {
+            case .squat: 
+                return [
+                    AccessoryExercise(name: "Leg Press", targetSets: 3, targetReps: 10, weight: 0, relatedLift: .squat),
+                    AccessoryExercise(name: "Ab Wheel", targetSets: 3, targetReps: 15, weight: 0, relatedLift: .squat)
+                ]
+            case .bench:
+                return [
+                    AccessoryExercise(name: "Dumbbell Rows", targetSets: 3, targetReps: 10, weight: 0, relatedLift: .bench),
+                    AccessoryExercise(name: "Tricep Pushdowns", targetSets: 3, targetReps: 12, weight: 0, relatedLift: .bench)
+                ]
+            case .deadlift:
+                return [
+                    AccessoryExercise(name: "Good Mornings", targetSets: 3, targetReps: 10, weight: 0, relatedLift: .deadlift),
+                    AccessoryExercise(name: "Hammer Curls", targetSets: 3, targetReps: 12, weight: 0, relatedLift: .deadlift)
+                ]
+            case .ohp:
+                return [
+                    AccessoryExercise(name: "Chin-ups", targetSets: 3, targetReps: 8, weight: 0, relatedLift: .ohp),
+                    AccessoryExercise(name: "Dips", targetSets: 3, targetReps: 10, weight: 0, relatedLift: .ohp)
+                ]
+            }
+        }
+    }
 }
 
 @Model
-final class AccessoryExercise {
+final class AccessoryExercise: Identifiable {
     var name: String = ""
     var targetSets: Int = 3
     var targetReps: Int = 10
     var weight: Double = 0
-    var relatedLiftValue: Int = 0 // Raw value for MainLift enum
+    var relatedLiftValue: Int = 0 
 
     var relatedLift: MainLift {
         get { MainLift(rawValue: relatedLiftValue) ?? .squat }
@@ -169,8 +213,6 @@ final class WorkoutSession {
     var week: Int = 1
     var cycle: Int = 1
     var isCompleted: Bool = false
-    
-    // New fields for AMRAP tracking
     var amrapReps: Int = 0
     var amrapWeight: Double = 0
 
@@ -191,7 +233,6 @@ final class WorkoutSession {
     
     var estimated1RM: Double {
         guard amrapReps > 0 else { return 0 }
-        // Epley Formula: Weight * (1 + 0.0333 * Reps)
         return amrapWeight * (1.0 + (Double(amrapReps) * 0.0333))
     }
 }

@@ -3,34 +3,81 @@ import SwiftData
 
 struct AccessorySettingsView: View {
     @Environment(\.modelContext) private var modelContext
+    @Query private var userProfiles: [UserProfile]
     @Query private var accessories: [AccessoryExercise]
 
     @State private var showingAddSheet = false
+    @State private var editingAccessory: AccessoryExercise?
 
     var body: some View {
         List {
-            ForEach(MainLift.allCases, id: \.self) { lift in
-                Section(header: Text("\(lift.name) Day Accessories")) {
-                    let liftAccessories = accessories.filter { $0.relatedLift == lift }
-
-                    if liftAccessories.isEmpty {
-                        Text("No accessories added.")
-                            .foregroundColor(.secondary)
+            if accessories.isEmpty {
+                Section {
+                    VStack(spacing: 8) {
+                        Text("No accessories found.")
                             .font(.caption)
-                    } else {
+                            .foregroundColor(.secondary)
+                        
+                        Button("Load Template Defaults") {
+                            loadDefaults()
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.orange)
+                        .controlSize(.small)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                }
+            }
+
+            ForEach(MainLift.allCases, id: \.self) { lift in
+                let liftAccessories = accessories.filter { $0.relatedLift == lift }
+                
+                if !liftAccessories.isEmpty {
+                    Section(header: 
+                        HStack(spacing: 4) {
+                            Image(systemName: lift.symbolName)
+                            Text(lift.name)
+                        }
+                    ) {
                         ForEach(liftAccessories) { accessory in
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text(accessory.name).fontWeight(.bold)
-                                    Text("\(accessory.targetSets) Sets x \(accessory.targetReps) @ \(String(format: "%.1f", accessory.weight))")
-                                        .font(.caption)
+                            Button(action: { editingAccessory = accessory }) {
+                                HStack {
+                                    VStack(alignment: .leading) {
+                                        Text(accessory.name).fontWeight(.bold)
+                                        Text("\(accessory.targetSets) Sets x \(accessory.targetReps) @ \(String(format: "%.1f", accessory.weight)) kg")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "pencil")
+                                        .font(.caption2)
                                         .foregroundColor(.secondary)
                                 }
                             }
+                            .buttonStyle(.plain)
                         }
                         .onDelete { indexSet in
                             deleteAccessories(at: indexSet, from: liftAccessories)
                         }
+                    }
+                }
+            }
+            
+            Section {
+                Button(action: { showingAddSheet.toggle() }) {
+                    HStack {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Add Accessory")
+                    }
+                    .foregroundColor(.accentColor)
+                }
+                
+                if !accessories.isEmpty {
+                    Button(role: .destructive, action: {
+                        for acc in accessories { modelContext.delete(acc) }
+                    }) {
+                        Text("Clear All")
                     }
                 }
             }
@@ -43,9 +90,28 @@ struct AccessorySettingsView: View {
                 }
             }
         }
+        .onAppear {
+            if accessories.isEmpty {
+                loadDefaults()
+            }
+        }
         .sheet(isPresented: $showingAddSheet) {
             AddAccessoryView()
         }
+        .sheet(item: $editingAccessory) { accessory in
+            AddAccessoryView(editingAccessory: accessory)
+        }
+    }
+
+    private func loadDefaults() {
+        let template = userProfiles.first?.selectedTemplate ?? .fsl
+        for lift in MainLift.allCases {
+            let defaults = template.defaultAccessories(for: lift)
+            for acc in defaults {
+                modelContext.insert(acc)
+            }
+        }
+        try? modelContext.save()
     }
 
     private func deleteAccessories(at offsets: IndexSet, from list: [AccessoryExercise]) {
@@ -53,11 +119,7 @@ struct AccessorySettingsView: View {
             let accessory = list[index]
             modelContext.delete(accessory)
         }
-        do {
-            try modelContext.save()
-        } catch {
-            print("Failed to delete accessory: \(error.localizedDescription)")
-        }
+        try? modelContext.save()
     }
 }
 

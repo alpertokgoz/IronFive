@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 struct WorkoutSet: Identifiable, Hashable {
     let id = UUID()
@@ -7,6 +8,7 @@ struct WorkoutSet: Identifiable, Hashable {
     let type: SetType
     var actualReps: Int // Logged reps for AMRAP
     var isCompleted: Bool = false
+    var exerciseName: String // e.g. "Squat", "Leg Press"
 
     enum SetType {
         case warmup
@@ -15,10 +17,11 @@ struct WorkoutSet: Identifiable, Hashable {
         case accessory
     }
 
-    init(weight: Double, reps: String, type: SetType, actualReps: Int = 0, isCompleted: Bool = false) {
+    init(weight: Double, reps: String, type: SetType, exerciseName: String, actualReps: Int = 0, isCompleted: Bool = false) {
         self.weight = weight
         self.reps = reps
         self.type = type
+        self.exerciseName = exerciseName
         self.actualReps = actualReps
         self.isCompleted = isCompleted
     }
@@ -39,11 +42,12 @@ struct WorkoutCalculator {
         let tm = getTM(for: lift, from: profile)
         let week = profile.currentWeek
         let round = profile.weightUnit.roundTo
+        let liftName = lift.name
 
         let warmup = [
-            WorkoutSet(weight: calculatedWeight(tm * 0.40, roundTo: round), reps: "5", type: .warmup),
-            WorkoutSet(weight: calculatedWeight(tm * 0.50, roundTo: round), reps: "5", type: .warmup),
-            WorkoutSet(weight: calculatedWeight(tm * 0.60, roundTo: round), reps: "3", type: .warmup)
+            WorkoutSet(weight: calculatedWeight(tm * 0.40, roundTo: round), reps: "5", type: .warmup, exerciseName: liftName),
+            WorkoutSet(weight: calculatedWeight(tm * 0.50, roundTo: round), reps: "5", type: .warmup, exerciseName: liftName),
+            WorkoutSet(weight: calculatedWeight(tm * 0.60, roundTo: round), reps: "3", type: .warmup, exerciseName: liftName)
         ]
 
         var main: [WorkoutSet] = []
@@ -53,35 +57,35 @@ struct WorkoutCalculator {
         case 1: // 5s week
             fslPercentage = 0.65
             main = [
-                WorkoutSet(weight: calculatedWeight(tm * 0.65, roundTo: round), reps: "5", type: .main),
-                WorkoutSet(weight: calculatedWeight(tm * 0.75, roundTo: round), reps: "5", type: .main),
-                WorkoutSet(weight: calculatedWeight(tm * 0.85, roundTo: round), reps: "5+", type: .main)
+                WorkoutSet(weight: calculatedWeight(tm * 0.65, roundTo: round), reps: "5", type: .main, exerciseName: liftName),
+                WorkoutSet(weight: calculatedWeight(tm * 0.75, roundTo: round), reps: "5", type: .main, exerciseName: liftName),
+                WorkoutSet(weight: calculatedWeight(tm * 0.85, roundTo: round), reps: "5+", type: .main, exerciseName: liftName)
             ]
         case 2: // 3s week
             fslPercentage = 0.70
             main = [
-                WorkoutSet(weight: calculatedWeight(tm * 0.70, roundTo: round), reps: "3", type: .main),
-                WorkoutSet(weight: calculatedWeight(tm * 0.80, roundTo: round), reps: "3", type: .main),
-                WorkoutSet(weight: calculatedWeight(tm * 0.90, roundTo: round), reps: "3+", type: .main)
+                WorkoutSet(weight: calculatedWeight(tm * 0.70, roundTo: round), reps: "3", type: .main, exerciseName: liftName),
+                WorkoutSet(weight: calculatedWeight(tm * 0.80, roundTo: round), reps: "3", type: .main, exerciseName: liftName),
+                WorkoutSet(weight: calculatedWeight(tm * 0.90, roundTo: round), reps: "3+", type: .main, exerciseName: liftName)
             ]
         case 3: // 5/3/1 week
             fslPercentage = 0.75
             main = [
-                WorkoutSet(weight: calculatedWeight(tm * 0.75, roundTo: round), reps: "5", type: .main),
-                WorkoutSet(weight: calculatedWeight(tm * 0.85, roundTo: round), reps: "3", type: .main),
-                WorkoutSet(weight: calculatedWeight(tm * 0.95, roundTo: round), reps: "1+", type: .main)
+                WorkoutSet(weight: calculatedWeight(tm * 0.75, roundTo: round), reps: "5", type: .main, exerciseName: liftName),
+                WorkoutSet(weight: calculatedWeight(tm * 0.85, roundTo: round), reps: "3", type: .main, exerciseName: liftName),
+                WorkoutSet(weight: calculatedWeight(tm * 0.95, roundTo: round), reps: "1+", type: .main, exerciseName: liftName)
             ]
         case 4: // Deload week
             fslPercentage = 0.40
             main = [
-                WorkoutSet(weight: calculatedWeight(tm * 0.40, roundTo: round), reps: "5", type: .main),
-                WorkoutSet(weight: calculatedWeight(tm * 0.50, roundTo: round), reps: "5", type: .main),
-                WorkoutSet(weight: calculatedWeight(tm * 0.60, roundTo: round), reps: "5", type: .main)
+                WorkoutSet(weight: calculatedWeight(tm * 0.40, roundTo: round), reps: "5", type: .main, exerciseName: liftName),
+                WorkoutSet(weight: calculatedWeight(tm * 0.50, roundTo: round), reps: "5", type: .main, exerciseName: liftName),
+                WorkoutSet(weight: calculatedWeight(tm * 0.60, roundTo: round), reps: "5", type: .main, exerciseName: liftName)
             ]
         default:
             fslPercentage = 0.65
             main = [
-                WorkoutSet(weight: calculatedWeight(tm * 0.65, roundTo: round), reps: "5", type: .main)
+                WorkoutSet(weight: calculatedWeight(tm * 0.65, roundTo: round), reps: "5", type: .main, exerciseName: liftName)
             ]
         }
 
@@ -97,33 +101,34 @@ struct WorkoutCalculator {
         }
 
         var supplemental: [WorkoutSet] = []
+        let supplementalName = "\(liftName) (\(profile.selectedTemplate.shortName))"
         if week != 4 { // typically no supplemental on deload
             switch profile.selectedTemplate {
             case .fsl:
                 for _ in 0..<5 {
-                    supplemental.append(WorkoutSet(weight: fslWeight, reps: "5", type: .supplemental))
+                    supplemental.append(WorkoutSet(weight: fslWeight, reps: "5", type: .supplemental, exerciseName: supplementalName))
                 }
             case .bbb:
                 for _ in 0..<5 {
-                    supplemental.append(WorkoutSet(weight: calculatedWeight(tm * 0.50, roundTo: round), reps: "10", type: .supplemental))
+                    supplemental.append(WorkoutSet(weight: calculatedWeight(tm * 0.50, roundTo: round), reps: "10", type: .supplemental, exerciseName: supplementalName))
                 }
             case .ssl:
                 for _ in 0..<5 {
-                    supplemental.append(WorkoutSet(weight: sslWeight, reps: "5", type: .supplemental))
+                    supplemental.append(WorkoutSet(weight: sslWeight, reps: "5", type: .supplemental, exerciseName: supplementalName))
                 }
             case .bbs:
                 for _ in 0..<10 {
-                    supplemental.append(WorkoutSet(weight: fslWeight, reps: "5", type: .supplemental))
+                    supplemental.append(WorkoutSet(weight: fslWeight, reps: "5", type: .supplemental, exerciseName: supplementalName))
                 }
             case .widowmaker:
-                supplemental.append(WorkoutSet(weight: fslWeight, reps: "20", type: .supplemental))
+                supplemental.append(WorkoutSet(weight: fslWeight, reps: "20", type: .supplemental, exerciseName: supplementalName))
             }
         }
 
         var accessorySets: [WorkoutSet] = []
         for accessory in accessories where accessory.relatedLift == lift {
             for _ in 0..<accessory.targetSets {
-                accessorySets.append(WorkoutSet(weight: accessory.weight, reps: "\(accessory.targetReps) (\(accessory.name))", type: .accessory))
+                accessorySets.append(WorkoutSet(weight: accessory.weight, reps: "\(accessory.targetReps)", type: .accessory, exerciseName: accessory.name))
             }
         }
 
