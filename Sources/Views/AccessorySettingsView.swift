@@ -17,7 +17,7 @@ struct AccessorySettingsView: View {
                         Text("No accessories found.")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                        
+
                         Button("Load Template Defaults") {
                             loadDefaults()
                         }
@@ -32,9 +32,9 @@ struct AccessorySettingsView: View {
 
             ForEach(MainLift.allCases, id: \.self) { lift in
                 let liftAccessories = accessories.filter { $0.relatedLift == lift }
-                
+
                 if !liftAccessories.isEmpty {
-                    Section(header: 
+                    Section(header:
                         HStack(spacing: 4) {
                             Image(systemName: lift.symbolName)
                             Text(lift.name)
@@ -63,7 +63,7 @@ struct AccessorySettingsView: View {
                     }
                 }
             }
-            
+
             Section {
                 Button(action: { showingAddSheet.toggle() }) {
                     HStack {
@@ -72,7 +72,7 @@ struct AccessorySettingsView: View {
                     }
                     .foregroundColor(.accentColor)
                 }
-                
+
                 if !accessories.isEmpty {
                     Button(role: .destructive, action: {
                         for acc in accessories { modelContext.delete(acc) }

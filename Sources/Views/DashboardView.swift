@@ -17,7 +17,7 @@ struct DashboardView: View {
                 VStack(spacing: 6) {
                 if let profile = userProfiles.first {
                     let nextLift = overrideLift ?? determineNextLift()
-                    
+
                     // Header with Cycle Info
                     HStack {
                         VStack(alignment: .leading, spacing: 0) {
@@ -28,7 +28,7 @@ struct DashboardView: View {
                                 .font(.system(size: 14, weight: .black, design: .rounded))
                         }
                         Spacer()
-                        
+
                         HStack(spacing: 8) {
                             NavigationLink(destination: HistoryView()) {
                                 Image(systemName: "chart.bar.fill")
@@ -48,7 +48,7 @@ struct DashboardView: View {
                         .buttonStyle(.plain)
                     }
                     .padding(.top, 2)
-                    
+
                     // Weekly Progress Dots
                     HStack(spacing: 8) {
                         ForEach(MainLift.allCases, id: \.self) { lift in
@@ -57,13 +57,13 @@ struct DashboardView: View {
                                 Circle()
                                     .stroke(completed ? lift.color : Color.white.opacity(0.3), lineWidth: 1.5)
                                     .frame(width: 28, height: 28)
-                                
+
                                 if completed {
                                     Circle()
                                         .fill(lift.color.gradient)
                                         .frame(width: 24, height: 24)
                                 }
-                                
+
                                 Image(systemName: lift.symbolName)
                                     .resizable()
                                     .aspectRatio(contentMode: .fit)
@@ -77,23 +77,23 @@ struct DashboardView: View {
                     .padding(.vertical, 4)
                     .padding(.horizontal, 10)
                     .background(Capsule().fill(Color.white.opacity(0.05)))
-                    
+
                     Spacer(minLength: 0)
-                    
+
                     // Main Glanceable Card
                     VStack(spacing: 0) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 20)
                                 .fill(nextLift.color.opacity(0.1))
-                            
+
                             VStack(spacing: 2) {
                                 Image(systemName: nextLift.symbolName)
                                     .font(.system(size: 30, weight: .black))
                                     .foregroundStyle(nextLift.color.gradient)
-                                
+
                                 Text(nextLift.name.uppercased())
                                     .font(.system(size: 16, weight: .black, design: .rounded))
-                                
+
                                 let tm = getTM(for: nextLift, profile: profile)
                                 Text("TM: \(String(format: "%.1f", tm))\(profile.weightUnit.label)")
                                     .font(.system(size: 10, weight: .bold, design: .monospaced))
@@ -101,7 +101,7 @@ struct DashboardView: View {
                             }
                         }
                         .frame(height: 80)
-                        
+
                         NavigationLink(destination: WorkoutActiveView(lift: nextLift, profile: profile, accessories: accessories)) {
                             HStack {
                                 Text("START WORKOUT")
@@ -124,7 +124,7 @@ struct DashboardView: View {
                         PreviewRow(icon: "flame.fill", label: "WARMUP", detail: "3 sets", color: .orange)
                         PreviewRow(icon: "bolt.fill", label: "MAIN", detail: "3 sets (AMRAP)", color: .yellow)
                         PreviewRow(icon: "square.stack.fill", label: profile.selectedTemplate.shortName, detail: supplementalDetail(profile), color: nextLift.color)
-                        
+
                         let accCount = accessories.filter({ $0.relatedLift == nextLift }).count
                         if accCount > 0 {
                             PreviewRow(icon: "dumbbell.fill", label: "ACCESSORIES", detail: "\(accCount) exercises", color: .secondary)
@@ -133,9 +133,9 @@ struct DashboardView: View {
                     .padding(8)
                     .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.05)))
                     .padding(.top, 4)
-                    
+
                     Spacer(minLength: 0)
-                    
+
                     // Quick Stats
                     HStack(spacing: 8) {
                         VStack(alignment: .leading, spacing: 2) {
@@ -150,7 +150,7 @@ struct DashboardView: View {
                                         .foregroundColor(.yellow)
                                 }
                             }
-                            
+
                             if let lastDate = workoutSessions.first?.date {
                                 let days = Calendar.current.dateComponents([.day], from: lastDate, to: Date()).day ?? 0
                                 Text(days == 0 ? "TRAINED TODAY" : days == 1 ? "1 DAY AGO" : "\(days) DAYS AGO")
@@ -159,9 +159,9 @@ struct DashboardView: View {
                             }
                         }
                         .padding(.horizontal, 4)
-                        
+
                         Spacer()
-                        
+
                         Button(action: { showLiftPicker = true }) {
                             HStack(spacing: 4) {
                                 Image(systemName: "arrow.triangle.2.circlepath")
@@ -175,16 +175,16 @@ struct DashboardView: View {
                         .buttonStyle(.plain)
                     }
                     .padding(.bottom, 24)
-                    
+
                 } else {
                     VStack(spacing: 12) {
                         Image(systemName: "dumbbell.fill")
                             .font(.system(size: 40))
                             .foregroundStyle(.orange.gradient)
-                        
+
                         Text("IronFive")
                             .font(.system(.title3, design: .rounded, weight: .black))
-                        
+
                         Button("Get Started") {
                             showOnboarding = true
                         }
@@ -243,6 +243,14 @@ struct DashboardView: View {
     }
 
     private func determineNextLift() -> MainLift {
+        if let profile = userProfiles.first {
+            // Priority 1: First incomplete lift of the current week
+            for lift in MainLift.allCases where !isLiftCompletedThisWeek(lift, week: profile.currentWeek, cycle: profile.currentCycle) {
+                return lift
+            }
+        }
+
+        // Priority 2: Standard rotation if all are done (or fallback)
         guard let lastSession = workoutSessions.first else {
             return .squat
         }
@@ -283,20 +291,20 @@ struct PreviewRow: View {
     let label: String
     let detail: String
     let color: Color
-    
+
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.system(size: 8))
                 .foregroundColor(color)
                 .frame(width: 12)
-            
+
             Text(label)
                 .font(.system(size: 8, weight: .black, design: .rounded))
                 .foregroundColor(.secondary)
-            
+
             Spacer()
-            
+
             Text(detail)
                 .font(.system(size: 9, weight: .bold, design: .rounded))
                 .foregroundColor(.white)

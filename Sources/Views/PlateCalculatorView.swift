@@ -56,13 +56,13 @@ struct PlateCalculatorView: View {
                                         Text(plate.weight == 1.25 ? "1.2" : "\(Int(plate.weight))")
                                             .font(.system(size: 6, weight: .black))
                                     )
-                                
+
                                 Text("\(String(format: "%.1f", plate.weight)) \(unit.label)")
                                     .font(.system(size: 14, weight: .bold, design: .rounded))
                                     .foregroundColor(.white)
-                                
+
                                 Spacer()
-                                
+
                                 Text("\(plate.count)")
                                     .font(.system(size: 20, weight: .black, design: .rounded))
                                     .foregroundColor(plateColor(plate.weight))

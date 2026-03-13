@@ -4,7 +4,7 @@ import SwiftData
 @main
 struct IronFiveApp: App {
     @StateObject private var workoutManager = WorkoutManager()
-    
+
     var body: some Scene {
         WindowGroup {
             DashboardView()

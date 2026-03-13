@@ -186,7 +186,7 @@ struct OnboardingView: View {
             weightUnit: selectedUnit
         )
         modelContext.insert(profile)
-        
+
         // Add default accessories for the selected template
         for lift in MainLift.allCases {
             let defaults = selectedTemplate.defaultAccessories(for: lift)
@@ -194,7 +194,7 @@ struct OnboardingView: View {
                 modelContext.insert(acc)
             }
         }
-        
+
         try? modelContext.save()
         dismiss()
     }

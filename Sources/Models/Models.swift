@@ -94,7 +94,7 @@ enum SupplementalTemplate: Int, Codable, CaseIterable {
         case .widowmaker: return "Widowmaker"
         }
     }
-    
+
     var shortName: String {
         switch self {
         case .fsl: return "FSL"
@@ -168,7 +168,7 @@ extension SupplementalTemplate {
             }
         default:
             switch lift {
-            case .squat: 
+            case .squat:
                 return [
                     AccessoryExercise(name: "Leg Press", targetSets: 3, targetReps: 10, weight: 0, relatedLift: .squat),
                     AccessoryExercise(name: "Ab Wheel", targetSets: 3, targetReps: 15, weight: 0, relatedLift: .squat)
@@ -199,7 +199,7 @@ final class AccessoryExercise: Identifiable {
     var targetSets: Int = 3
     var targetReps: Int = 10
     var weight: Double = 0
-    var relatedLiftValue: Int = 0 
+    var relatedLiftValue: Int = 0
 
     var relatedLift: MainLift {
         get { MainLift(rawValue: relatedLiftValue) ?? .squat }
@@ -239,7 +239,7 @@ final class WorkoutSession {
         self.amrapReps = amrapReps
         self.amrapWeight = amrapWeight
     }
-    
+
     var estimated1RM: Double {
         guard amrapReps > 0 else { return 0 }
         return amrapWeight * (1.0 + (Double(amrapReps) * 0.0333))

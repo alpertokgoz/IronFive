@@ -29,7 +29,7 @@ struct HistoryView: View {
                     }
                     .pickerStyle(.navigationLink)
                     .tint(selectedChartLift.color)
-                    
+
                     if chartData.isEmpty {
                         Text("No AMRAP data for \(selectedChartLift.name)")
                             .font(.caption2)
@@ -85,7 +85,7 @@ struct HistoryView: View {
                                     Text(session.mainLift.name)
                                         .font(.system(.title3, design: .rounded, weight: .black))
                                     .foregroundColor(session.mainLift.color)
-                                    
+
                                     Text("Cycle \(session.cycle) • Week \(session.week)")
                                         .font(.system(size: 10, weight: .semibold, design: .rounded))
                                         .foregroundColor(.secondary)
@@ -97,7 +97,7 @@ struct HistoryView: View {
                                     .fontWeight(.medium)
                                     .foregroundColor(.secondary)
                             }
-                            
+
                             if session.amrapReps > 0 {
                                 Divider().background(Color.secondary.opacity(0.3))
                                 HStack(alignment: .bottom) {
