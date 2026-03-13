@@ -61,16 +61,18 @@ struct WorkoutActiveView: View {
                         HStack(spacing: 4) {
                             if let icon = step.liftIcon {
                                 Image(systemName: icon)
-                                    .font(.system(size: 14, weight: .black))
+                                    .font(.system(size: 12, weight: .heavy))
                                     .foregroundStyle(lift.color.gradient)
                             }
                             Text(step.title.uppercased())
-                                .font(.system(size: 12, weight: .black, design: .rounded))
+                                .font(.system(size: 11, weight: .heavy, design: .rounded))
+                                .foregroundColor(.white)
                                 .lineLimit(1)
                         }
                     } else {
-                        Text("SUMMARY")
-                            .font(.system(size: 12, weight: .black, design: .rounded))
+                        Text("COMPLETED")
+                            .font(.system(size: 11, weight: .heavy, design: .rounded))
+                            .foregroundColor(.accentColor)
                     }
                 }
                 .padding(.horizontal, 8)
@@ -574,15 +576,15 @@ struct WorkoutStepView: View {
 
             // Unified Progress Component and Skip Button
             HStack(alignment: .bottom) {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 3) {
                     let currentPhaseSteps = allSteps.filter { $0.title == step.title }
                     let currentIdx = currentPhaseSteps.firstIndex(where: { $0.id == step.id }) ?? 0
                     
                     Text("\(currentIdx + 1)/\(currentPhaseSteps.count) SET")
-                        .font(.system(size: 9, weight: .black, design: .rounded))
+                        .font(.system(size: 8, weight: .black, design: .rounded))
                         .foregroundColor(.white.opacity(0.5))
                     
-                    HStack(spacing: 4) {
+                    HStack(spacing: 3) {
                         ForEach(0..<currentPhaseSteps.count, id: \.self) { i in
                             let s = currentPhaseSteps[i]
                             let isCurrent = (s.id == step.id)
@@ -590,7 +592,7 @@ struct WorkoutStepView: View {
                             
                             Capsule()
                                 .fill(isCurrent ? .white : (isCompleted ? .green : .white.opacity(0.15)))
-                                .frame(width: isCurrent ? 12 : 6, height: 3)
+                                .frame(width: isCurrent ? 10 : 5, height: 2.5)
                                 .animation(.spring(), value: isCurrent)
                         }
                     }
@@ -602,15 +604,15 @@ struct WorkoutStepView: View {
                     withAnimation { selectedTab = nextTab }
                 }) {
                     Text("SKIP")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundColor(.white.opacity(0.4))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundColor(.white.opacity(0.6))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
                         .background(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.bottom, 6)
+            .padding(.bottom, 4)
             .padding(.horizontal, 2)
         }
     }
