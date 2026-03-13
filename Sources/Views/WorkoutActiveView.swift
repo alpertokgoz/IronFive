@@ -61,10 +61,12 @@ struct WorkoutActiveView: View {
                         HStack(spacing: 4) {
                             if let icon = step.liftIcon {
                                 Image(systemName: icon)
-                                    .font(.system(size: 10, weight: .black))
+                                    .font(.system(size: 14, weight: .black))
+                                    .foregroundStyle(lift.color.gradient)
                             }
                             Text(step.title.uppercased())
                                 .font(.system(size: 12, weight: .black, design: .rounded))
+                                .lineLimit(1)
                         }
                     } else {
                         Text("SUMMARY")
@@ -206,7 +208,7 @@ struct WorkoutActiveView: View {
         // 1. Warmup
         let warmupPercentages = [40, 50, 60]
         for (index, set) in sets.warmup.enumerated() {
-            newSteps.append(WorkoutStep(title: "\(lift.name) Warmup", liftIcon: lift.symbolName, workoutSet: set, totalSetsInPhase: sets.warmup.count, setNumberInPhase: index + 1, isAMRAP: false, percentage: index < warmupPercentages.count ? warmupPercentages[index] : nil))
+            newSteps.append(WorkoutStep(title: "Warmup", liftIcon: lift.symbolName, workoutSet: set, totalSetsInPhase: sets.warmup.count, setNumberInPhase: index + 1, isAMRAP: false, percentage: index < warmupPercentages.count ? warmupPercentages[index] : nil))
         }
         
         // 2. Main
@@ -220,7 +222,7 @@ struct WorkoutActiveView: View {
         
         for (index, set) in sets.main.enumerated() {
             let isAmrap = set.reps.contains("+")
-            newSteps.append(WorkoutStep(title: lift.name, liftIcon: lift.symbolName, workoutSet: set, totalSetsInPhase: sets.main.count, setNumberInPhase: index + 1, isAMRAP: isAmrap, percentage: index < mainPercentages.count ? mainPercentages[index] : nil))
+            newSteps.append(WorkoutStep(title: "Main", liftIcon: lift.symbolName, workoutSet: set, totalSetsInPhase: sets.main.count, setNumberInPhase: index + 1, isAMRAP: isAmrap, percentage: index < mainPercentages.count ? mainPercentages[index] : nil))
         }
         
         // 3. Supplemental
@@ -244,7 +246,7 @@ struct WorkoutActiveView: View {
         }
         
         for (index, set) in sets.supplemental.enumerated() {
-            newSteps.append(WorkoutStep(title: "\(lift.name) \(profile.selectedTemplate.shortName)", liftIcon: lift.symbolName, workoutSet: set, totalSetsInPhase: sets.supplemental.count, setNumberInPhase: index + 1, isAMRAP: false, percentage: supplementalPercentage > 0 ? supplementalPercentage : nil))
+            newSteps.append(WorkoutStep(title: profile.selectedTemplate.shortName, liftIcon: lift.symbolName, workoutSet: set, totalSetsInPhase: sets.supplemental.count, setNumberInPhase: index + 1, isAMRAP: false, percentage: supplementalPercentage > 0 ? supplementalPercentage : nil))
         }
         
         // 4. Accessories
@@ -334,7 +336,7 @@ struct WorkoutActiveView: View {
     private func finishWorkout() {
         workoutManager.endWorkout()
 
-        let amrapStep = steps.last { $0.title == lift.name && $0.workoutSet.reps.contains("+") && $0.workoutSet.isCompleted }
+        let amrapStep = steps.last { $0.title == "Main" && $0.workoutSet.reps.contains("+") && $0.workoutSet.isCompleted }
         let actualReps = amrapStep?.workoutSet.actualReps ?? 0
         let weight = amrapStep?.workoutSet.weight ?? 0
 

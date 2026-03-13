@@ -44,16 +44,16 @@ struct DashboardView: View {
                     HStack(spacing: 8) {
                         ForEach(MainLift.allCases, id: \.self) { lift in
                             let completed = isLiftCompletedThisWeek(lift, week: profile.currentWeek, cycle: profile.currentCycle)
-                            VStack(spacing: 4) {
+                            ZStack {
                                 Circle()
-                                    .fill(completed ? lift.color : Color.white.opacity(0.1))
-                                    .frame(width: 8, height: 8)
+                                    .fill(completed ? lift.color : Color.clear)
+                                    .frame(width: 24, height: 24)
                                     .overlay(
                                         Circle()
-                                            .stroke(lift.color.opacity(0.5), lineWidth: completed ? 0 : 1)
+                                            .stroke(completed ? lift.color : Color.white.opacity(0.2), lineWidth: 1.5)
                                     )
                                 Image(systemName: lift.symbolName)
-                                    .font(.system(size: 8, weight: .bold))
+                                    .font(.system(size: 10, weight: .semibold))
                                     .foregroundColor(completed ? .white : .secondary)
                             }
                         }
