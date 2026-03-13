@@ -25,6 +25,11 @@ struct WorkoutSet: Identifiable, Hashable {
         self.actualReps = actualReps
         self.isCompleted = isCompleted
     }
+
+    var estimated1RM: Double {
+        guard actualReps > 0 else { return 0 }
+        return weight * (1.0 + (Double(actualReps) * 0.0333))
+    }
 }
 
 struct WorkoutCalculator {

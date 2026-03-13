@@ -5,6 +5,8 @@ struct SummaryTab: View {
     let profile: UserProfile
     let totalWeight: Double
     let showCelebration: Bool
+    let amrapStep: WorkoutStep?
+    let bestE1RM: Double
     let onFinish: () -> Void
 
     var body: some View {
@@ -29,6 +31,44 @@ struct SummaryTab: View {
                     .padding(.top, 4)
 
                     VStack(spacing: 6) {
+                        if let amrap = amrapStep {
+                            VStack(spacing: 2) {
+                                Text("AMRAP RESULT")
+                                    .font(.system(size: 8, weight: .black, design: .rounded))
+                                    .foregroundColor(.orange)
+                                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                                    Text("\(amrap.workoutSet.actualReps)")
+                                        .font(.system(size: 28, weight: .black, design: .rounded))
+                                        .foregroundColor(.orange)
+                                    Text("REPS @ \(String(format: "%.1f", amrap.workoutSet.weight))\(profile.weightUnit.label)")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundColor(.secondary)
+                                }
+
+                                let currentE1RM = amrap.workoutSet.estimated1RM
+                                if currentE1RM > 0 {
+                                    HStack(spacing: 4) {
+                                        Text("E1RM: \(String(format: "%.1f", currentE1RM))")
+                                            .font(.system(size: 10, weight: .black))
+                                            .foregroundColor(.yellow)
+
+                                        if currentE1RM > bestE1RM && bestE1RM > 0 {
+                                            Text("PR! +\(String(format: "%.1f", currentE1RM - bestE1RM))")
+                                                .font(.system(size: 8, weight: .black))
+                                                .padding(.horizontal, 4)
+                                                .padding(.vertical, 1)
+                                                .background(Color.green)
+                                                .cornerRadius(2)
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(8)
+                            .frame(maxWidth: .infinity)
+                            .background(RoundedRectangle(cornerRadius: 12).fill(Color.orange.opacity(0.1)))
+                            .padding(.bottom, 4)
+                        }
+
                         SummaryStatRow(label: "ENERGY", value: "\(Int(workoutManager.activeEnergy))", unit: "kcal", icon: "flame.fill", color: .orange)
                         SummaryStatRow(label: "HEART RATE", value: "\(Int(workoutManager.heartRate))", unit: "bpm", icon: "heart.fill", color: .red)
                         SummaryStatRow(label: "TOTAL LIFTED", value: "\(Int(totalWeight))", unit: profile.weightUnit.label, icon: "dumbbell.fill", color: .blue)
@@ -43,7 +83,6 @@ struct SummaryTab: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.green)
-                    .padding(.top, 4)
                 }
             }
             .padding(.horizontal)

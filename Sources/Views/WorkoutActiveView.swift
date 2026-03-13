@@ -31,7 +31,6 @@ struct WorkoutActiveView: View {
     @State private var finalAmrapReps = 0
     @State private var finalAmrapWeight = 0.0
 
-
     var body: some View {
         VStack(spacing: 0) {
             // Header: Title & Progress
@@ -59,7 +58,7 @@ struct WorkoutActiveView: View {
                                     .fontWeight(.heavy)
                                     .foregroundStyle(lift.color.gradient)
                             }
-                            Text(step.title.uppercased())
+                            Text("\(lift.shortName) · \(step.title.uppercased())")
                                 .font(.system(size: 11, weight: .heavy, design: .rounded))
                                 .foregroundColor(.white)
                                 .lineLimit(1)
@@ -74,13 +73,23 @@ struct WorkoutActiveView: View {
                 .padding(.top, 2)
 
                 // Overall Workout Progress Bar
-                ProgressView(value: Double(completedStepsCount), total: Double(steps.count))
-                    .progressViewStyle(.linear)
-                    .tint(.green)
-                    .background(Color.white.opacity(0.15))
-                    .frame(height: 2)
-                    .clipShape(Capsule())
-                    .padding(.horizontal, 4)
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.15))
+                        .frame(height: 6)
+
+                    let progress = steps.count > 0 ? Double(completedStepsCount) / Double(steps.count) : 0
+                    Capsule()
+                        .fill(Color.green.gradient)
+                        .frame(width: max(0, (WKInterfaceDevice.current().screenBounds.width - 8) * progress), height: 6)
+
+                    Text("\(Int(progress * 100))%")
+                        .font(.system(size: 6, weight: .black, design: .monospaced))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+                .padding(.horizontal, 4)
+                .padding(.bottom, 2)
             }
             .padding(.bottom, 2)
             .background(Color.black.opacity(0.4))
@@ -93,19 +102,25 @@ struct WorkoutActiveView: View {
                         allSteps: steps,
                         selectedTab: $selectedTab,
                         nextTab: index + 1,
+                        workoutSessions: workoutSessions,
                         onRestStart: startRestTimer,
-                        onPlateCalc: { weight in selectedWeightForCalc = weight },
-                        prRepsToBeat: calculateRepsToBeatPR(for: steps[index])
+                        onPlateCalc: { weight in selectedWeightForCalc = weight }
                     )
                     .tag(index)
                 }
 
                 // Finish Tab
+                let currentAmrapStep = steps.last { $0.isAMRAP && $0.workoutSet.isCompleted }
+                let previousSessions = workoutSessions.filter { $0.mainLift == lift && $0.isCompleted }
+                let personalBestE1RM = previousSessions.map { $0.estimated1RM }.max() ?? 0
+
                 SummaryTab(
                     workoutManager: workoutManager,
                     profile: profile,
                     totalWeight: totalWeightLifted,
                     showCelebration: showCelebration,
+                    amrapStep: currentAmrapStep,
+                    bestE1RM: personalBestE1RM,
                     onFinish: { showFinishConfirmation = true }
                 )
                 .tag(steps.count)
@@ -278,16 +293,6 @@ struct WorkoutActiveView: View {
         case 3: return "5/3/1 Week"
         case 4: return "Deload"
         default: return "Training"
-        }
-    }
-
-    private func weekAbbreviation(for week: Int) -> String {
-        switch week {
-        case 1: return "5's"
-        case 2: return "3's"
-        case 3: return "5/3/1"
-        case 4: return "Deload"
-        default: return ""
         }
     }
 

@@ -4,6 +4,8 @@ import WatchKit
 struct SetRowView: View {
     @Binding var workoutSet: WorkoutSet
     let isAMRAP: Bool
+    let lift: MainLift
+    let prGoal: Int?
     var onComplete: () -> Void
     var onPlateCalc: () -> Void
 
@@ -20,7 +22,7 @@ struct SetRowView: View {
                         Text("\(String(format: "%.1f", workoutSet.weight))")
                             .font(.system(size: 26, weight: .black, design: .rounded))
                         Text("kg")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.secondary)
                     }
                     .foregroundStyle(workoutSet.isCompleted ? .secondary : .primary)
@@ -30,18 +32,18 @@ struct SetRowView: View {
                 if isAMRAP {
                     VStack(alignment: .leading, spacing: 1) {
                         Text("AMRAP")
-                            .font(.system(size: 16, weight: .black, design: .rounded))
+                            .font(.system(size: 12, weight: .black, design: .rounded))
                             .foregroundColor(.orange)
 
                         if workoutSet.isCompleted {
                             Text("\(workoutSet.actualReps) REPS")
-                                .font(.system(size: 10, weight: .bold))
+                                .font(.system(size: 12, weight: .bold))
                                 .foregroundColor(.secondary)
                         }
                     }
                 } else {
                     Text("\(workoutSet.reps) REPS")
-                        .font(.system(size: 16, weight: .black, design: .rounded))
+                        .font(.system(size: 14, weight: .black, design: .rounded))
                         .foregroundColor(.secondary)
                 }
             }
@@ -59,7 +61,7 @@ struct SetRowView: View {
 
                     // 2. Filling Animation
                     Circle()
-                        .fill(Color.green)
+                        .fill(isAMRAP ? Color.orange : Color.green)
                         .scaleEffect(workoutSet.isCompleted ? 1.0 : 0.001)
                         .opacity(workoutSet.isCompleted ? 1.0 : 0.0)
                         .animation(.spring(response: 0.4, dampingFraction: 0.6), value: workoutSet.isCompleted)
@@ -82,12 +84,27 @@ struct SetRowView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 4)
         .padding(.horizontal, 8)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white.opacity(0.05))
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(lift.color.opacity(0.1))
+
+                if isAMRAP && !workoutSet.isCompleted {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.orange.opacity(0.3), lineWidth: 2)
+                }
+            }
         )
+        .overlay(alignment: .trailing) {
+            if !workoutSet.isCompleted {
+                Text("TAP")
+                    .font(.system(size: 6, weight: .black))
+                    .foregroundColor(.white.opacity(0.3))
+                    .padding(.trailing, 22)
+            }
+        }
         .sheet(isPresented: $showAmrapSheet) {
             AmrapInputView(reps: $workoutSet.actualReps) {
                 showAmrapSheet = false
@@ -116,7 +133,12 @@ struct SetRowView: View {
     }
 
     private func markCompleted() {
-        WKInterfaceDevice.current().play(.success)
+        if let goal = prGoal, workoutSet.actualReps >= goal {
+            WKInterfaceDevice.current().play(.notification)
+        } else {
+            WKInterfaceDevice.current().play(.success)
+        }
+
         withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
             scale = 0.9
             workoutSet.isCompleted = true
