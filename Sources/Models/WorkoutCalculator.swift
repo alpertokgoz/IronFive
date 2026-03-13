@@ -44,14 +44,26 @@ struct WorkoutCalculator {
         let round = profile.weightUnit.roundTo
         let liftName = lift.name
 
-        let warmup = [
+        let warmup = generateWarmupSets(tm: tm, round: round, liftName: liftName)
+        let (main, fslPercentage, sslWeight) = generateMainSets(tm: tm, week: week, round: round, liftName: liftName)
+        let supplemental = generateSupplementalSets(tm: tm, week: week, round: round, liftName: liftName, profile: profile, fslPercentage: fslPercentage, sslWeight: sslWeight)
+        let accessorySets = generateAccessorySets(lift: lift, accessories: accessories)
+
+        return (warmup, main, supplemental, accessorySets)
+    }
+
+    private static func generateWarmupSets(tm: Double, round: Double, liftName: String) -> [WorkoutSet] {
+        return [
             WorkoutSet(weight: calculatedWeight(tm * 0.40, roundTo: round), reps: "5", type: .warmup, exerciseName: liftName),
             WorkoutSet(weight: calculatedWeight(tm * 0.50, roundTo: round), reps: "5", type: .warmup, exerciseName: liftName),
             WorkoutSet(weight: calculatedWeight(tm * 0.60, roundTo: round), reps: "3", type: .warmup, exerciseName: liftName)
         ]
+    }
 
+    private static func generateMainSets(tm: Double, week: Int, round: Double, liftName: String) -> (sets: [WorkoutSet], fslPercentage: Double, sslWeight: Double) {
         var main: [WorkoutSet] = []
         var fslPercentage: Double = 0.65
+        var sslWeight: Double = 0
 
         switch week {
         case 1: // 5s week
@@ -61,6 +73,7 @@ struct WorkoutCalculator {
                 WorkoutSet(weight: calculatedWeight(tm * 0.75, roundTo: round), reps: "5", type: .main, exerciseName: liftName),
                 WorkoutSet(weight: calculatedWeight(tm * 0.85, roundTo: round), reps: "5+", type: .main, exerciseName: liftName)
             ]
+            sslWeight = calculatedWeight(tm * 0.75, roundTo: round)
         case 2: // 3s week
             fslPercentage = 0.70
             main = [
@@ -68,6 +81,7 @@ struct WorkoutCalculator {
                 WorkoutSet(weight: calculatedWeight(tm * 0.80, roundTo: round), reps: "3", type: .main, exerciseName: liftName),
                 WorkoutSet(weight: calculatedWeight(tm * 0.90, roundTo: round), reps: "3+", type: .main, exerciseName: liftName)
             ]
+            sslWeight = calculatedWeight(tm * 0.80, roundTo: round)
         case 3: // 5/3/1 week
             fslPercentage = 0.75
             main = [
@@ -75,6 +89,7 @@ struct WorkoutCalculator {
                 WorkoutSet(weight: calculatedWeight(tm * 0.85, roundTo: round), reps: "3", type: .main, exerciseName: liftName),
                 WorkoutSet(weight: calculatedWeight(tm * 0.95, roundTo: round), reps: "1+", type: .main, exerciseName: liftName)
             ]
+            sslWeight = calculatedWeight(tm * 0.85, roundTo: round)
         case 4: // Deload week
             fslPercentage = 0.40
             main = [
@@ -82,27 +97,23 @@ struct WorkoutCalculator {
                 WorkoutSet(weight: calculatedWeight(tm * 0.50, roundTo: round), reps: "5", type: .main, exerciseName: liftName),
                 WorkoutSet(weight: calculatedWeight(tm * 0.60, roundTo: round), reps: "5", type: .main, exerciseName: liftName)
             ]
+            sslWeight = calculatedWeight(tm * 0.40, roundTo: round)
         default:
             fslPercentage = 0.65
             main = [
                 WorkoutSet(weight: calculatedWeight(tm * 0.65, roundTo: round), reps: "5", type: .main, exerciseName: liftName)
             ]
+            sslWeight = calculatedWeight(tm * 0.65, roundTo: round)
         }
+        return (main, fslPercentage, sslWeight)
+    }
 
-        let fslWeight: Double = calculatedWeight(tm * fslPercentage, roundTo: round)
-        var sslWeight: Double = 0
-        
-        // Calculate SSL weight (from main set 2)
-        switch week {
-        case 1: sslWeight = calculatedWeight(tm * 0.75, roundTo: round)
-        case 2: sslWeight = calculatedWeight(tm * 0.80, roundTo: round)
-        case 3: sslWeight = calculatedWeight(tm * 0.85, roundTo: round)
-        default: sslWeight = fslWeight
-        }
-
+    private static func generateSupplementalSets(tm: Double, week: Int, round: Double, liftName: String, profile: UserProfile, fslPercentage: Double, sslWeight: Double) -> [WorkoutSet] {
         var supplemental: [WorkoutSet] = []
         let supplementalName = "\(liftName) (\(profile.selectedTemplate.shortName))"
-        if week != 4 { // typically no supplemental on deload
+        let fslWeight = calculatedWeight(tm * fslPercentage, roundTo: round)
+
+        if week != 4 {
             switch profile.selectedTemplate {
             case .fsl:
                 for _ in 0..<5 {
@@ -124,15 +135,17 @@ struct WorkoutCalculator {
                 supplemental.append(WorkoutSet(weight: fslWeight, reps: "20", type: .supplemental, exerciseName: supplementalName))
             }
         }
+        return supplemental
+    }
 
+    private static func generateAccessorySets(lift: MainLift, accessories: [AccessoryExercise]) -> [WorkoutSet] {
         var accessorySets: [WorkoutSet] = []
         for accessory in accessories where accessory.relatedLift == lift {
             for _ in 0..<accessory.targetSets {
                 accessorySets.append(WorkoutSet(weight: accessory.weight, reps: "\(accessory.targetReps)", type: .accessory, exerciseName: accessory.name))
             }
         }
-
-        return (warmup, main, supplemental, accessorySets)
+        return accessorySets
     }
 
     // Round to nearest increment (5 lbs or 2.5 kg)
