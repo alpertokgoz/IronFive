@@ -145,6 +145,15 @@ enum MainLift: Int, Codable, CaseIterable {
         case .ohp: return "figure.arms.up"
         }
     }
+
+    var shortName: String {
+        switch self {
+        case .squat: return "SQ"
+        case .bench: return "BP"
+        case .deadlift: return "DL"
+        case .ohp: return "OHP"
+        }
+    }
 }
 
 extension SupplementalTemplate {

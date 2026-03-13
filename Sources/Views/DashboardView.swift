@@ -21,7 +21,7 @@ struct DashboardView: View {
                     // Header with Cycle Info
                     HStack {
                         VStack(alignment: .leading, spacing: 0) {
-                            Text("CYCLE \(profile.currentCycle)")
+                            Text("CYCLE \(profile.currentCycle) · \(profile.selectedTemplate.shortName)")
                                 .font(.system(size: 10, weight: .black, design: .rounded))
                                 .foregroundColor(.accentColor)
                             Text(weekDescription(for: profile.currentWeek).uppercased())
@@ -29,12 +29,21 @@ struct DashboardView: View {
                         }
                         Spacer()
                         
-                        NavigationLink(destination: HistoryView()) {
-                            Image(systemName: "chart.bar.fill")
-                                .font(.system(size: 12, weight: .bold))
-                                .padding(8)
-                                .background(Color.white.opacity(0.1))
-                                .clipShape(Circle())
+                        HStack(spacing: 8) {
+                            NavigationLink(destination: HistoryView()) {
+                                Image(systemName: "chart.bar.fill")
+                                    .font(.system(size: 10))
+                                    .padding(6)
+                                    .background(Color.white.opacity(0.1))
+                                    .clipShape(Circle())
+                            }
+                            NavigationLink(destination: SettingsView()) {
+                                Image(systemName: "gearshape.fill")
+                                    .font(.system(size: 10))
+                                    .padding(6)
+                                    .background(Color.white.opacity(0.1))
+                                    .clipShape(Circle())
+                            }
                         }
                         .buttonStyle(.plain)
                     }
@@ -109,32 +118,54 @@ struct DashboardView: View {
                         .buttonStyle(.plain)
                     }
                     .padding(.top, 4)
+
+                    // Workout Preview Card
+                    VStack(alignment: .leading, spacing: 4) {
+                        PreviewRow(icon: "flame.fill", label: "WARMUP", detail: "3 sets", color: .orange)
+                        PreviewRow(icon: "bolt.fill", label: "MAIN", detail: "3 sets (AMRAP)", color: .yellow)
+                        PreviewRow(icon: "square.stack.fill", label: profile.selectedTemplate.shortName, detail: supplementalDetail(profile), color: nextLift.color)
+                        
+                        let accCount = accessories.filter({ $0.relatedLift == nextLift }).count
+                        if accCount > 0 {
+                            PreviewRow(icon: "dumbbell.fill", label: "ACCESSORIES", detail: "\(accCount) exercises", color: .secondary)
+                        }
+                    }
+                    .padding(8)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.05)))
+                    .padding(.top, 4)
                     
                     Spacer(minLength: 0)
                     
                     // Quick Stats
                     HStack(spacing: 8) {
-                        let bestE1RM = workoutSessions.filter { $0.mainLift == nextLift && $0.isCompleted }.map { $0.estimated1RM }.max() ?? 0
-                        if bestE1RM > 0 {
-                            VStack(alignment: .leading, spacing: 0) {
-                                Text("BEST E1RM")
-                                    .font(.system(size: 7, weight: .black))
-                                    .foregroundColor(.secondary)
-                                Text("\(String(format: "%.1f", bestE1RM))")
-                                    .font(.system(size: 12, weight: .black, design: .rounded))
-                                    .foregroundColor(.yellow)
+                        VStack(alignment: .leading, spacing: 2) {
+                            let bestE1RM = workoutSessions.filter { $0.mainLift == nextLift && $0.isCompleted }.map { $0.estimated1RM }.max() ?? 0
+                            if bestE1RM > 0 {
+                                VStack(alignment: .leading, spacing: 0) {
+                                    Text("BEST E1RM")
+                                        .font(.system(size: 7, weight: .black))
+                                        .foregroundColor(.secondary)
+                                    Text("\(String(format: "%.1f", bestE1RM))")
+                                        .font(.system(size: 12, weight: .black, design: .rounded))
+                                        .foregroundColor(.yellow)
+                                }
                             }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(0.05)))
+                            
+                            if let lastDate = workoutSessions.first?.date {
+                                let days = Calendar.current.dateComponents([.day], from: lastDate, to: Date()).day ?? 0
+                                Text(days == 0 ? "TRAINED TODAY" : days == 1 ? "1 DAY AGO" : "\(days) DAYS AGO")
+                                    .font(.system(size: 7, weight: .bold))
+                                    .foregroundColor(days > 3 ? .orange : .secondary)
+                            }
                         }
+                        .padding(.horizontal, 4)
                         
                         Spacer()
                         
                         Button(action: { showLiftPicker = true }) {
                             HStack(spacing: 4) {
-                                Image(systemName: "list.bullet")
-                                Text("OTHER")
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                Text("CHANGE")
                             }
                             .font(.system(size: 10, weight: .bold))
                             .padding(.horizontal, 8)
@@ -233,6 +264,42 @@ struct DashboardView: View {
         case .bench: return profile.benchTM
         case .deadlift: return profile.deadliftTM
         case .ohp: return profile.ohpTM
+        }
+    }
+
+    private func supplementalDetail(_ profile: UserProfile) -> String {
+        switch profile.selectedTemplate {
+        case .fsl: return "5 × 5"
+        case .bbb: return "5 × 10"
+        case .ssl: return "5 × 5"
+        case .bbs: return "10 × 5"
+        case .widowmaker: return "1 × 20"
+        }
+    }
+}
+
+struct PreviewRow: View {
+    let icon: String
+    let label: String
+    let detail: String
+    let color: Color
+    
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 8))
+                .foregroundColor(color)
+                .frame(width: 12)
+            
+            Text(label)
+                .font(.system(size: 8, weight: .black, design: .rounded))
+                .foregroundColor(.secondary)
+            
+            Spacer()
+            
+            Text(detail)
+                .font(.system(size: 9, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
         }
     }
 }

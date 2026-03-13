@@ -10,6 +10,7 @@ struct WorkoutActiveView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var workoutManager: WorkoutManager
     @Environment(\.dismiss) var dismiss
+    @Query(sort: \WorkoutSession.date, order: .reverse) private var workoutSessions: [WorkoutSession]
 
     @State private var selectedTab = 0
     @State private var steps: [WorkoutStep] = []
@@ -67,7 +68,7 @@ struct WorkoutActiveView: View {
                                     .fontWeight(.heavy)
                                     .foregroundStyle(lift.color.gradient)
                             }
-                            Text(step.title.uppercased())
+                            Text("\(lift.shortName) · \(step.title.uppercased())")
                                 .font(.system(size: 11, weight: .heavy, design: .rounded))
                                 .foregroundColor(.white)
                                 .lineLimit(1)
@@ -82,13 +83,23 @@ struct WorkoutActiveView: View {
                 .padding(.top, 2)
 
                 // Overall Workout Progress Bar
-                ProgressView(value: Double(completedStepsCount), total: Double(steps.count))
-                    .progressViewStyle(.linear)
-                    .tint(.green)
-                    .background(Color.white.opacity(0.15))
-                    .frame(height: 2)
-                    .clipShape(Capsule())
-                    .padding(.horizontal, 4)
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.15))
+                        .frame(height: 6)
+                    
+                    let progress = steps.count > 0 ? Double(completedStepsCount) / Double(steps.count) : 0
+                    Capsule()
+                        .fill(Color.green.gradient)
+                        .frame(width: max(0, (WKInterfaceDevice.current().screenBounds.width - 8) * progress), height: 6)
+                    
+                    Text("\(Int(progress * 100))%")
+                        .font(.system(size: 6, weight: .black, design: .monospaced))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+                .padding(.horizontal, 4)
+                .padding(.bottom, 2)
             }
             .padding(.bottom, 2)
             .background(Color.black.opacity(0.4))
@@ -101,6 +112,7 @@ struct WorkoutActiveView: View {
                         allSteps: steps,
                         selectedTab: $selectedTab,
                         nextTab: index + 1,
+                        workoutSessions: workoutSessions,
                         onRestStart: startRestTimer,
                         onPlateCalc: { weight in selectedWeightForCalc = weight }
                     )
@@ -108,11 +120,17 @@ struct WorkoutActiveView: View {
                 }
 
                 // Finish Tab
+                let currentAmrapStep = steps.last { $0.isAMRAP && $0.workoutSet.isCompleted }
+                let previousSessions = workoutSessions.filter { $0.mainLift == lift && $0.isCompleted }
+                let personalBestE1RM = previousSessions.map { $0.estimated1RM }.max() ?? 0
+                
                 SummaryTab(
                     workoutManager: workoutManager,
                     profile: profile,
                     totalWeight: totalWeightLifted,
                     showCelebration: showCelebration,
+                    amrapStep: currentAmrapStep,
+                    bestE1RM: personalBestE1RM,
                     onFinish: { showFinishConfirmation = true }
                 )
                 .tag(steps.count)
@@ -390,6 +408,8 @@ struct SummaryTab: View {
     let profile: UserProfile
     let totalWeight: Double
     let showCelebration: Bool
+    let amrapStep: WorkoutActiveView.WorkoutStep?
+    let bestE1RM: Double
     let onFinish: () -> Void
 
     var body: some View {
@@ -414,6 +434,44 @@ struct SummaryTab: View {
                     .padding(.top, 4)
                     
                     VStack(spacing: 6) {
+                        if let amrap = amrapStep {
+                            VStack(spacing: 2) {
+                                Text("AMRAP RESULT")
+                                    .font(.system(size: 8, weight: .black, design: .rounded))
+                                    .foregroundColor(.orange)
+                                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                                    Text("\(amrap.workoutSet.actualReps)")
+                                        .font(.system(size: 28, weight: .black, design: .rounded))
+                                        .foregroundColor(.orange)
+                                    Text("REPS @ \(String(format: "%.1f", amrap.workoutSet.weight))\(profile.weightUnit.label)")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                let currentE1RM = amrap.workoutSet.estimated1RM
+                                if currentE1RM > 0 {
+                                    HStack(spacing: 4) {
+                                        Text("E1RM: \(String(format: "%.1f", currentE1RM))")
+                                            .font(.system(size: 10, weight: .black))
+                                            .foregroundColor(.yellow)
+                                        
+                                        if currentE1RM > bestE1RM && bestE1RM > 0 {
+                                            Text("PR! +\(String(format: "%.1f", currentE1RM - bestE1RM))")
+                                                .font(.system(size: 8, weight: .black))
+                                                .padding(.horizontal, 4)
+                                                .padding(.vertical, 1)
+                                                .background(Color.green)
+                                                .cornerRadius(2)
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(8)
+                            .frame(maxWidth: .infinity)
+                            .background(RoundedRectangle(cornerRadius: 12).fill(Color.orange.opacity(0.1)))
+                            .padding(.bottom, 4)
+                        }
+
                         SummaryStatRow(label: "ENERGY", value: "\(Int(workoutManager.activeEnergy))", unit: "kcal", icon: "flame.fill", color: .orange)
                         SummaryStatRow(label: "HEART RATE", value: "\(Int(workoutManager.heartRate))", unit: "bpm", icon: "heart.fill", color: .red)
                         SummaryStatRow(label: "TOTAL LIFTED", value: "\(Int(totalWeight))", unit: profile.weightUnit.label, icon: "dumbbell.fill", color: .blue)
@@ -428,7 +486,6 @@ struct SummaryTab: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.green)
-                    .padding(.top, 4)
                 }
             }
             .padding(.horizontal)
@@ -530,57 +587,15 @@ struct WorkoutStepView: View {
     let allSteps: [WorkoutActiveView.WorkoutStep]
     @Binding var selectedTab: Int
     let nextTab: Int
+    let workoutSessions: [WorkoutSession]
     var onRestStart: () -> Void
     var onPlateCalc: (Double) -> Void
 
     @EnvironmentObject var workoutManager: WorkoutManager
-    @Query(sort: \WorkoutSession.date, order: .reverse) private var workoutSessions: [WorkoutSession]
 
     var body: some View {
         VStack(spacing: 2) {
-            Spacer(minLength: 0)
-            
-            if let icon = step.liftIcon {
-                Image(systemName: icon)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 32, height: 32)
-                    .fontWeight(.black)
-                    .foregroundStyle(lift.color.gradient)
-                    .padding(.bottom, 2)
-            }
-            
-            // PR Goal Badge
-            if step.isAMRAP {
-                if let prReps = calculateRepsToBeatPR() {
-                    HStack(spacing: 4) {
-                        Image(systemName: "crown.fill")
-                        Text("GOAL: \(prReps) REPS")
-                    }
-                    .font(.system(size: 9, weight: .black, design: .rounded))
-                    .foregroundColor(.yellow)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.yellow.opacity(0.15))
-                    .cornerRadius(4)
-                    .padding(.bottom, 2)
-                }
-            } else if let pct = step.percentage {
-                Text("\(pct)%")
-                    .font(.system(size: 10, weight: .black, design: .rounded))
-                    .foregroundColor(.white.opacity(0.4))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
-                    .padding(.bottom, 2)
-            }
-
-            SetRowView(workoutSet: $step.workoutSet, isAMRAP: step.isAMRAP, onComplete: onRestStart, onPlateCalc: { onPlateCalc(step.workoutSet.weight) })
-                .padding(.horizontal, 4)
-
-            Spacer(minLength: 0)
-
-            // Unified Progress Component and Skip Button
+            // Moved progress and skip above the main card to prevent clipping
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 3) {
                     let currentPhaseSteps = allSteps.filter { $0.title == step.title }
@@ -618,9 +633,65 @@ struct WorkoutStepView: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.bottom, 15) // Reclaim safe area space
-            .padding(.horizontal, 2)
+            .padding(.horizontal, 8)
+            .padding(.top, 4)
+
+            Spacer(minLength: 0)
+            
+            if let icon = step.liftIcon {
+                Image(systemName: icon)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 32, height: 32)
+                    .fontWeight(.black)
+                    .foregroundStyle(lift.color.gradient)
+                    .padding(.bottom, 2)
+            }
+            
+            // PR Goal Badge
+            if step.isAMRAP {
+                if let prReps = calculateRepsToBeatPR() {
+                    HStack(spacing: 4) {
+                        Image(systemName: "crown.fill")
+                        Text("GOAL: \(prReps) REPS")
+                    }
+                    .font(.system(size: 9, weight: .black, design: .rounded))
+                    .foregroundColor(.yellow)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.yellow.opacity(0.15))
+                    .cornerRadius(4)
+                    .padding(.bottom, 2)
+                }
+            } else if let pct = step.percentage {
+                Text("\(pct)%")
+                    .font(.system(size: 10, weight: .black, design: .rounded))
+                    .foregroundColor(lift.color)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(lift.color.opacity(0.15))
+                    .cornerRadius(4)
+                    .padding(.bottom, 2)
+            }
+
+            SetRowView(
+                workoutSet: $step.workoutSet,
+                isAMRAP: step.isAMRAP,
+                lift: lift,
+                prGoal: step.isAMRAP ? calculateRepsToBeatPR() : nil,
+                onComplete: onRestStart,
+                onPlateCalc: { onPlateCalc(step.workoutSet.weight) }
+            )
+                .padding(.horizontal, 4)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(step.isAMRAP ? Color.orange.opacity(0.5) : Color.clear, lineWidth: 2)
+                        .padding(.horizontal, 4)
+                )
+
+            Spacer(minLength: 0)
         }
+        .padding(.bottom, 8)
     }
 
     private func calculateRepsToBeatPR() -> Int? {
@@ -699,6 +770,8 @@ struct ParticleBurstView: View {
 struct SetRowView: View {
     @Binding var workoutSet: WorkoutSet
     let isAMRAP: Bool
+    let lift: MainLift
+    let prGoal: Int?
     var onComplete: () -> Void
     var onPlateCalc: () -> Void
     
@@ -713,7 +786,7 @@ struct SetRowView: View {
                 Button(action: onPlateCalc) {
                     HStack(alignment: .firstTextBaseline, spacing: 2) {
                         Text("\(String(format: "%.1f", workoutSet.weight))")
-                            .font(.system(size: 26, weight: .black, design: .rounded))
+                            .font(.system(size: 32, weight: .black, design: .rounded))
                         Text("kg")
                             .font(.system(size: 12, weight: .bold))
                             .foregroundColor(.secondary)
@@ -725,18 +798,18 @@ struct SetRowView: View {
                 if isAMRAP {
                     VStack(alignment: .leading, spacing: 1) {
                         Text("AMRAP")
-                            .font(.system(size: 16, weight: .black, design: .rounded))
+                            .font(.system(size: 14, weight: .black, design: .rounded))
                             .foregroundColor(.orange)
                         
                         if workoutSet.isCompleted {
                             Text("\(workoutSet.actualReps) REPS")
-                                .font(.system(size: 10, weight: .bold))
+                                .font(.system(size: 12, weight: .bold))
                                 .foregroundColor(.secondary)
                         }
                     }
                 } else {
                     Text("\(workoutSet.reps) REPS")
-                        .font(.system(size: 16, weight: .black, design: .rounded))
+                        .font(.system(size: 14, weight: .black, design: .rounded))
                         .foregroundColor(.secondary)
                 }
             }
@@ -754,7 +827,7 @@ struct SetRowView: View {
                     
                     // 2. Filling Animation
                     Circle()
-                        .fill(Color.green)
+                        .fill(isAMRAP ? Color.orange : Color.green)
                         .scaleEffect(workoutSet.isCompleted ? 1.0 : 0.001)
                         .opacity(workoutSet.isCompleted ? 1.0 : 0.0)
                         .animation(.spring(response: 0.4, dampingFraction: 0.6), value: workoutSet.isCompleted)
@@ -780,9 +853,24 @@ struct SetRowView: View {
         .padding(.vertical, 8)
         .padding(.horizontal, 8)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white.opacity(0.05))
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(lift.color.opacity(0.1))
+                
+                if isAMRAP && !workoutSet.isCompleted {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.orange.opacity(0.3), lineWidth: 2)
+                }
+            }
         )
+        .overlay(alignment: .trailing) {
+            if !workoutSet.isCompleted {
+                Text("TAP")
+                    .font(.system(size: 6, weight: .black))
+                    .foregroundColor(.white.opacity(0.3))
+                    .padding(.trailing, 22)
+            }
+        }
         .sheet(isPresented: $showAmrapSheet) {
             AmrapInputView(reps: $workoutSet.actualReps) {
                 showAmrapSheet = false
@@ -811,7 +899,12 @@ struct SetRowView: View {
     }
 
     private func markCompleted() {
-        WKInterfaceDevice.current().play(.success)
+        if let goal = prGoal, workoutSet.actualReps >= goal {
+            WKInterfaceDevice.current().play(.notification)
+        } else {
+            WKInterfaceDevice.current().play(.success)
+        }
+        
         withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
             scale = 0.9
             workoutSet.isCompleted = true
