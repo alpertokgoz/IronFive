@@ -638,16 +638,6 @@ struct WorkoutStepView: View {
 
             Spacer(minLength: 0)
             
-            if let icon = step.liftIcon {
-                Image(systemName: icon)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 32, height: 32)
-                    .fontWeight(.black)
-                    .foregroundStyle(lift.color.gradient)
-                    .padding(.bottom, 2)
-            }
-            
             // PR Goal Badge
             if step.isAMRAP {
                 if let prReps = calculateRepsToBeatPR() {
@@ -688,10 +678,8 @@ struct WorkoutStepView: View {
                         .stroke(step.isAMRAP ? Color.orange.opacity(0.5) : Color.clear, lineWidth: 2)
                         .padding(.horizontal, 4)
                 )
-
-            Spacer(minLength: 0)
         }
-        .padding(.bottom, 8)
+        .padding(.bottom, 2)
     }
 
     private func calculateRepsToBeatPR() -> Int? {
@@ -786,9 +774,9 @@ struct SetRowView: View {
                 Button(action: onPlateCalc) {
                     HStack(alignment: .firstTextBaseline, spacing: 2) {
                         Text("\(String(format: "%.1f", workoutSet.weight))")
-                            .font(.system(size: 32, weight: .black, design: .rounded))
+                            .font(.system(size: 26, weight: .black, design: .rounded))
                         Text("kg")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.secondary)
                     }
                     .foregroundStyle(workoutSet.isCompleted ? .secondary : .primary)
@@ -798,7 +786,7 @@ struct SetRowView: View {
                 if isAMRAP {
                     VStack(alignment: .leading, spacing: 1) {
                         Text("AMRAP")
-                            .font(.system(size: 14, weight: .black, design: .rounded))
+                            .font(.system(size: 12, weight: .black, design: .rounded))
                             .foregroundColor(.orange)
                         
                         if workoutSet.isCompleted {
@@ -850,7 +838,7 @@ struct SetRowView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 4)
         .padding(.horizontal, 8)
         .background(
             ZStack {
