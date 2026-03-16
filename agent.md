@@ -3,6 +3,7 @@
 IronFive is a standalone Apple Watch application designed to track strength training workouts following the **5/3/1** methodology.
 
 ## Tech Stack
+
 - **Language:** Swift 5+
 - **UI Framework:** SwiftUI (optimized for watchOS)
 - **Data Persistence:** SwiftData
@@ -10,6 +11,7 @@ IronFive is a standalone Apple Watch application designed to track strength trai
 - **Project Management:** XcodeGen (generates `.xcodeproj` from `project.yml`)
 
 ## Project Structure
+
 - `Sources/`
   - `Models/`: SwiftData models (`UserProfile`, `AccessoryExercise`, `WorkoutSession`) and business logic (`WorkoutCalculator`).
   - `Managers/`: `WorkoutManager` handles HealthKit sessions and state.
@@ -19,6 +21,7 @@ IronFive is a standalone Apple Watch application designed to track strength trai
 - `.github/workflows/`: CI/CD pipeline configurations.
 
 ## Development Guidelines
+
 - **Project Refresh:** After modifying `project.yml` or adding many files, run `xcodegen` to update the Xcode project.
 - **Architecture:** MVVM-like pattern using `@Environment` for `WorkoutManager` and SwiftData's `@Query`/`@Model`.
 - **UI/UX:** Focus on high-contrast, large-tap targets suitable for Apple Watch. Use Haptic feedback for transitions (implemented in `RestTimerView`).
@@ -26,6 +29,7 @@ IronFive is a standalone Apple Watch application designed to track strength trai
 - **Coding Standards:** SwiftLint is used to maintain code quality. Avoid iOS-specific modifiers that are unavailable on watchOS.
 
 ## Core Logic (5/3/1)
+
 - Progression is based on Training Max (typically 90% of 1RM).
 - Cycles consist of 4 weeks (3 weeks of increasing intensity + 1 deload week).
 - Automatic progression (+5lbs upper body, +10lbs lower body) occurs after completing a full cycle.
@@ -39,5 +43,8 @@ IronFive is a standalone Apple Watch application designed to track strength trai
   - If the workflow **fails**: inspect the logs (`gh run view --log-failed <run-id>`), identify the root cause, fix it, and push again. Repeat until CI/CD passes.
 
 ### Self-Updating Instructions
+
 - **Keep this file current:** Whenever you discover information that would help future agents work more effectively on this project (e.g. new patterns, common pitfalls, tooling quirks, important conventions), **update `agent.md` immediately** and commit the change. Do not wait to be asked.
+- **Improved CI Logging:** The CI pipeline now uses `xcbeautify` to emit GitHub Actions annotations. Errors and warnings will appear directly on the PR/Commit "Checks" tab and in the build summary.
+
 - Examples of things worth adding: new architectural decisions, dependency changes, gotchas discovered during debugging, useful commands, or cross-cutting conventions.
