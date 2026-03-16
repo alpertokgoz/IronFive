@@ -29,3 +29,15 @@ IronFive is a standalone Apple Watch application designed to track strength trai
 - Progression is based on Training Max (typically 90% of 1RM).
 - Cycles consist of 4 weeks (3 weeks of increasing intensity + 1 deload week).
 - Automatic progression (+5lbs upper body, +10lbs lower body) occurs after completing a full cycle.
+
+## Agent Guidelines
+
+### Git & CI/CD Workflow
+- **Pre-commit hooks:** Always run `pre-commit run --files <changed files>` (or `pre-commit run --all-files`) before every `git commit`. Fix any violations before committing.
+- **Post-push CI/CD check:** After every `git push`, check the CI/CD status using the GitHub Actions API (e.g., `gh run list --limit 5` or the github-mcp-server tools). Wait for the run triggered by the push to complete.
+  - If the workflow **succeeds**: no further action required.
+  - If the workflow **fails**: inspect the logs (`gh run view --log-failed <run-id>`), identify the root cause, fix it, and push again. Repeat until CI/CD passes.
+
+### Self-Updating Instructions
+- **Keep this file current:** Whenever you discover information that would help future agents work more effectively on this project (e.g. new patterns, common pitfalls, tooling quirks, important conventions), **update `agent.md` immediately** and commit the change. Do not wait to be asked.
+- Examples of things worth adding: new architectural decisions, dependency changes, gotchas discovered during debugging, useful commands, or cross-cutting conventions.
