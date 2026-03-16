@@ -38,7 +38,6 @@ struct RestTimerView: View {
                 Button(action: {
                     withAnimation {
                         isPresented = false
-                        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["restTimer"])
                         onDismiss()
                     }
                 }) {

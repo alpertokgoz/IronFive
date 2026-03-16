@@ -18,16 +18,28 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          brew install xcodegen swiftlint
+          brew install xcodegen swiftlint xcbeautify
           xcodegen generate
 
       - name: Run SwiftLint
-        run: swiftlint lint
+        run: swiftlint lint --reporter github-actions-logging
 
       - name: Build
         run: |
+          set -o pipefail
           xcodebuild clean build \
             -project IronFive.xcodeproj \
             -scheme IronFive \
             -destination 'generic/platform=watchOS Simulator' \
-            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO \
+            2>&1 | tee build.log | xcbeautify --renderer github-actions
+
+      - name: Report Errors and Warnings
+        if: always()
+        run: |
+          echo "## Build Errors" >> $GITHUB_STEP_SUMMARY
+          grep -E "error:|warning:" build.log \
+            | grep -v "^note:" \
+            | grep -v "ld: warning:" \
+            | sort | uniq \
+            >> $GITHUB_STEP_SUMMARY || echo "No errors or warnings found." >> $GITHUB_STEP_SUMMARY
