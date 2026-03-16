@@ -87,3 +87,6 @@ fastlane/test_output
 #
 iOSInjectionProject/
 docs/
+
+.gemini/
+gha-creds-*.json
