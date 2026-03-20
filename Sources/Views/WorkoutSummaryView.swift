@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct SummaryTab: View {
+struct WorkoutSummaryView: View {
     @ObservedObject var workoutManager: WorkoutManager
     let profile: UserProfile
     let totalWeight: Double
@@ -10,59 +10,59 @@ struct SummaryTab: View {
     let onFinish: () -> Void
 
     var body: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 1) {
             if showCelebration {
                 let amrapE1RM = amrapStep?.workoutSet.estimated1RM ?? 0
                 let delta = (amrapE1RM > bestE1RM && bestE1RM > 0) ? (amrapE1RM - bestE1RM) : 0
                 CelebrationView(prDelta: delta > 0 ? delta : nil)
-                    .frame(height: 90)
+                    .frame(height: 80)
             } else {
-                HStack(spacing: 4) {
+                HStack(spacing: 3) {
                     Image(systemName: "trophy.fill")
-                        .font(.system(size: 14))
+                        .font(.system(size: 12))
                         .foregroundStyle(.yellow.gradient)
 
                     Text("GREAT JOB!")
-                        .font(.system(size: 12, weight: .black, design: .rounded))
+                        .font(.system(size: 11, weight: .black, design: .rounded))
                 }
 
                 if let amrap = amrapStep {
                     VStack(spacing: 0) {
                         Text("SESSION BEST")
-                            .font(.system(size: 6, weight: .black, design: .rounded))
+                            .font(.system(size: 5, weight: .black, design: .rounded))
                             .foregroundColor(.orange)
-                        HStack(alignment: .firstTextBaseline, spacing: 3) {
+                        HStack(alignment: .firstTextBaseline, spacing: 2) {
                             Text("\(amrap.workoutSet.actualReps)")
-                                .font(.system(size: 14, weight: .black, design: .rounded))
+                                .font(.system(size: 13, weight: .black, design: .rounded))
                                 .foregroundColor(.orange)
                             Text("REPS @ \(String(format: "%.1f", amrap.workoutSet.weight))\(profile.weightUnit.label)")
-                                .font(.system(size: 8, weight: .bold))
+                                .font(.system(size: 7, weight: .bold))
                                 .foregroundColor(.secondary)
                         }
                     }
-                    .padding(.vertical, 2)
+                    .padding(.vertical, 1)
                     .padding(.horizontal, 4)
                     .frame(maxWidth: .infinity)
                     .background(RoundedRectangle(cornerRadius: 6).fill(Color.orange.opacity(0.1)))
                 }
 
                 // 2x2 Stats Grid
-                VStack(spacing: 2) {
-                    HStack(spacing: 2) {
+                VStack(spacing: 1) {
+                    HStack(spacing: 1) {
                         CompactStatBox(label: "KCAL", value: workoutManager.activeEnergy > 0 ? "\(Int(workoutManager.activeEnergy))" : "—", icon: "flame.fill", color: .orange)
                         CompactStatBox(label: "BPM", value: workoutManager.heartRate > 0 ? "\(Int(workoutManager.heartRate))" : "—", icon: "heart.fill", color: .red)
                     }
-                    HStack(spacing: 2) {
+                    HStack(spacing: 1) {
                         CompactStatBox(label: profile.weightUnit.label.uppercased(), value: "\(Int(totalWeight))", icon: "dumbbell.fill", color: .blue)
                         CompactStatBox(label: "TIME", value: workoutManager.elapsedTimeString, icon: "timer", color: .purple)
                     }
                 }
-                .padding(.horizontal, 2)
+                .padding(.horizontal, 1)
 
                 Button(action: onFinish) {
                     Text("FINISH")
-                        .font(.system(size: 12, weight: .black, design: .rounded))
-                        .frame(maxWidth: .infinity, minHeight: 28)
+                        .font(.system(size: 11, weight: .black, design: .rounded))
+                        .frame(maxWidth: .infinity, minHeight: 24)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.green)
@@ -70,7 +70,7 @@ struct SummaryTab: View {
             }
         }
         .padding(.horizontal, 4)
-        .padding(.vertical, 2)
+        .padding(.vertical, 0)
     }
 
 }
@@ -82,21 +82,21 @@ struct CompactStatBox: View {
     let color: Color
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 3) {
             Image(systemName: icon)
                 .foregroundColor(color)
-                .font(.system(size: 10))
+                .font(.system(size: 9))
             VStack(alignment: .leading, spacing: -2) {
                 Text(value)
-                    .font(.system(size: 12, weight: .black, design: .rounded))
+                    .font(.system(size: 11, weight: .black, design: .rounded))
                 Text(label)
-                    .font(.system(size: 6, weight: .bold))
+                    .font(.system(size: 5, weight: .bold))
                     .foregroundColor(.secondary)
             }
             Spacer()
         }
-        .padding(.vertical, 4)
-        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .padding(.horizontal, 5)
         .frame(maxWidth: .infinity)
         .background(Color.white.opacity(0.06))
         .cornerRadius(6)
