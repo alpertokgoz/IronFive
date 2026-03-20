@@ -1,50 +1,34 @@
-# Spec: Workout Summary View Redesign
+# Workout Summary Redesign
 
 ## Goal
-Redesign the post-workout summary on Apple Watch to provide a high-hierarchy, visually appealing layout that focuses on training volume and health metrics (KCAL, BPM).
+Redesign the `WorkoutSummaryView` to provide a high-impact, single-page summary of a completed 5/3/1 workout, emphasizing the user's AMRAP (As Many Reps As Possible) performance, overall cycle progress, and health data.
 
-## Success Criteria
-- **Clarity**: Total volume lifted is the primary hero metric.
-- **Density**: KCAL and Heart Rate are presented in a 2x2 or 2x1 grid without being cramped.
-- **Accessibility**: The "FINISH" button is a large, easy-to-tap target at the bottom.
-- **Consistency**: Matches the established design language of `IronFive`.
+## Design: "The Hero Accomplishment"
+Focus on the "win" of the workout—the AMRAP set—while grouping supporting data and celebrating the completion with visual and haptic feedback.
 
-## Design
+### Layout & Components
+1. **Header**: Minimalist title like "SESSION COMPLETE" with the lift's theme color (e.g., Orange for Squat).
+2. **Hero Section (AMRAP)**: High-contrast card.
+   - **Performance**: "SQUAT 100 kg × 8" (or lbs) in bold typography.
+   - **Est. 1RM Badge**: Small accented badge showing calculated 1RM (e.g., "126 kg EST. 1RM").
+   - **New PR Indicator**: A "NEW PR!" badge if the estimated 1RM is a personal best for that lift.
+3. **Stat Row (Health & Effort)**: Three compact columns.
+   - **KCAL**: Flame icon + active energy.
+   - **AVG BPM**: Heart icon + heart rate.
+   - **TIME**: Clock icon + total duration.
+4. **Progress Card (Cycle Status)**: Dedicated card for program progress.
+   - **Week/Cycle Info**: "CYCLE 2, WEEK 3 (5/3/1)".
+   - **Progress Bar**: Sleek bar showing progress toward finishing the 4-workout week.
+5. **Efficiency Footer**: Large, centered "TOTAL VOLUME" metric (e.g., "4,250 kg LIFTED") in bold.
+6. **Primary Action**: "FINISH" button at the bottom, anchored to the edge.
 
-### 1. View Structure
-The view will be renamed `WorkoutSummaryView` and will be part of the `TabView` in `WorkoutActiveView`.
+### Interaction & Feedback
+- **Celebration**: Trigger `ParticleBurstView` with the lift's color upon showing the summary.
+- **Haptics**: `UINotificationFeedbackGenerator` for success pulses on the "Finish" button.
+- **Animations**: Stats "count up" to their final values when the view appears.
+- **Scroll-free**: The entire view must fit on a single page without scrolling.
 
-### 2. Layout Hierarchy (Top to Bottom)
-- **Header**:
-  - Icon: `🏆` (trophy.fill)
-  - Text: "WORKOUT SAVED" (system size 11, black, rounded)
-  - Alignment: Center-top.
-- **Hero Card (Volume)**:
-  - Label: "TOTAL VOLUME" (accent color, font size 8, extra bold)
-  - Value: Big, prominent display of `totalWeight` (system size 20, black, rounded)
-  - Unit: e.g., "KG" (secondary color, font size 10)
-  - Background: Gradient (0.2 opacity of Blue/Accent) with a left border accent.
-- **Stats Grid**:
-  - A horizontal row of two boxes.
-  - Box 1: "🔥 KCAL" + `activeEnergy` value.
-  - Box 2: "❤️ BPM" + `heartRate` value.
-  - Style: Subtle dark background (`Color.white.opacity(0.08)`), rounded corners (10).
-- **Action Button**:
-  - Label: "FINISH" (font size 15, black, rounded)
-  - Color: `.green` (borderedProminent style).
-  - Height: ~40px.
-
-### 3. PR/Celebration Logic
-If `showCelebration` is `true`:
-- The header text changes to "NEW PR!" (gold/yellow).
-- An additional badge for the AMRAP result ("SESSION BEST") is shown above the Hero Card or as a small overlay on it.
-- Confetti particles (from `CelebrationView`) will still spawn in the background.
-
-## Technical Implementation
-- **File**: `Sources/Views/WorkoutSummaryView.swift`
-- **Component**: Update `CompactStatBox` to match the new design with smaller text and larger icons.
-- **View**: Remove `ScrollView` to avoid double-scroll issues within `TabView` and ensure the layout is pixel-perfect for the 46mm (and below) watch screens.
-
-## Verification Plan
-- **Manual**: Verify that on Apple Watch Series 11 (46mm) the layout is not clipped and the "FINISH" button is easily tappable.
-- **Build**: Ensure `xcodebuild` passes after the renaming.
+### Implementation Details
+- **View**: `WorkoutSummaryView` will be updated to accept `WorkoutStep` to extract the AMRAP data.
+- **Logic**: Calculate total volume from completed sets and identify if a new PR was set by comparing with `WorkoutSession` history.
+- **Theming**: Background `Color.black.gradient` with a top-down glow using the `lift.color`.
