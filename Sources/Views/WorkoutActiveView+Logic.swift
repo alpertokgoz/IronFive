@@ -213,20 +213,14 @@ extension WorkoutActiveView {
                 .tag(index)
             }
 
-            // Finish Tab
-            let currentAmrapStep = steps.last { $0.isAMRAP && $0.workoutSet.isCompleted }
-            let previousSessions = workoutSessions.filter { $0.mainLift == lift && $0.isCompleted }
-            let personalBestE1RM = previousSessions.map { $0.estimated1RM }.max() ?? 0
-
             WorkoutSummaryView(
                 workoutManager: workoutManager,
                 profile: profile,
                 totalWeight: totalWeightLifted,
                 showCelebration: showCelebration,
-                amrapStep: currentAmrapStep,
-                bestE1RM: personalBestE1RM,
                 onFinish: { showFinishConfirmation = true }
             )
+
             .tag(steps.count)
         }
     }
