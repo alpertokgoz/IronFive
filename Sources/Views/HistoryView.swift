@@ -2,48 +2,82 @@ import SwiftUI
 import SwiftData
 import Charts
 
+struct ChartPoint: Identifiable {
+    let id = UUID()
+    let date: Date
+    let value: Double
+    let lift: MainLift
+}
+
 struct HistoryView: View {
     @Query(sort: \WorkoutSession.date, order: .reverse) private var sessions: [WorkoutSession]
     @Query private var userProfiles: [UserProfile]
     @Environment(\.modelContext) private var modelContext
 
-    @State private var selectedChartLift: MainLift = .squat
-
     private var unitLabel: String {
         userProfiles.first?.weightUnit.label ?? "lbs"
     }
 
-    private var chartData: [WorkoutSession] {
-        sessions.filter { $0.mainLift == selectedChartLift && $0.amrapReps > 0 }
-            .sorted { $0.date < $1.date } // Chart expects oldest to newest
+    private var chartData: [ChartPoint] {
+        var points: [ChartPoint] = []
+        for lift in MainLift.allCases {
+            // Only chart week 3 (which represents the 1's week / peak of the cycle)
+            let liftSessions = sessions.filter { $0.mainLift == lift && $0.amrapReps > 0 && $0.week == 3 }
+                .sorted { $0.date < $1.date } // Oldest to newest for the chart
+                .suffix(10) // Show up to the 10 most recent sessions per lift to avoid overcrowding
+            for session in liftSessions {
+                points.append(ChartPoint(date: session.date, value: session.estimated1RM, lift: lift))
+            }
+        }
+        return points
+    }
+
+    private func weekName(for week: Int) -> String {
+        switch week {
+        case 1: return "5's Week"
+        case 2: return "3's Week"
+        case 3: return "1's Week"
+        case 4: return "Deload"
+        default: return ""
+        }
     }
 
     var body: some View {
         List {
             Section {
                 VStack(alignment: .leading, spacing: 12) {
-                    Picker("Lift", selection: $selectedChartLift) {
-                        ForEach(MainLift.allCases, id: \.self) { lift in
-                            Text(lift.name).tag(lift)
-                        }
-                    }
-                    .pickerStyle(.navigationLink)
-                    .tint(selectedChartLift.color)
-
                     if chartData.isEmpty {
-                        Text("No AMRAP data for \(selectedChartLift.name)")
+                        Text("No 1's Week AMRAP data recorded yet")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.vertical)
                     } else {
-                        Chart(chartData) { session in
+                        HStack(spacing: 12) {
+                            ForEach(MainLift.allCases, id: \.self) { lift in
+                                HStack(spacing: 2) {
+                                    Circle().fill(lift.color).frame(width: 6, height: 6)
+                                    Text(lift.shortName)
+                                        .font(.system(size: 8, weight: .bold, design: .rounded))
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.bottom, -2)
+
+                        Chart(chartData) { point in
                             LineMark(
-                                x: .value("Date", session.date),
-                                y: .value("Est 1RM", session.estimated1RM)
+                                x: .value("Date", point.date),
+                                y: .value("Est 1RM", point.value)
                             )
-                            .foregroundStyle(selectedChartLift.color)
-                            .symbol(Circle())
+                            .foregroundStyle(point.lift.color)
+                            .interpolationMethod(.monotone)
+                            .symbol {
+                                Circle()
+                                    .stroke(point.lift.color, lineWidth: 1)
+                                    .frame(width: 4, height: 4)
+                            }
                         }
                         .chartYScale(domain: .automatic(includesZero: false))
                         .chartYAxis {
@@ -77,7 +111,7 @@ struct HistoryView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .listRowBackground(Color.clear)
             } else {
-                ForEach(sessions) { session in
+                ForEach(sessions.prefix(4)) { session in
                     Section {
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(alignment: .top) {
@@ -86,7 +120,7 @@ struct HistoryView: View {
                                         .font(.system(.title3, design: .rounded, weight: .black))
                                     .foregroundColor(session.mainLift.color)
 
-                                    Text("Cycle \(session.cycle) • Week \(session.week)")
+                                    Text("Cycle \(session.cycle) - \(weekName(for: session.week))")
                                         .font(.system(size: 10, weight: .semibold, design: .rounded))
                                         .foregroundColor(.secondary)
                                         .textCase(.uppercase)

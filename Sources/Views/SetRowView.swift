@@ -18,33 +18,49 @@ struct SetRowView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Button(action: onPlateCalc) {
                     HStack(alignment: .firstTextBaseline, spacing: 2) {
-                        Text("\(String(format: "%.1f", workoutSet.weight))")
-                            .font(.system(size: 26, weight: .black, design: .rounded))
-                        Text("kg")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.secondary)
+                        if workoutSet.weight > 0 {
+                            Text("\(String(format: "%.1f", workoutSet.weight))")
+                                .font(.system(size: 26, weight: .black, design: .rounded))
+                            Text("kg")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text("BW")
+                                .font(.system(size: 26, weight: .black, design: .rounded))
+                                .foregroundColor(.secondary)
+                        }
                     }
                     .foregroundStyle(workoutSet.isCompleted ? .secondary : .primary)
                 }
                 .buttonStyle(.plain)
+                .disabled(workoutSet.weight == 0)
 
                 if isAMRAP {
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("AMRAP")
-                            .font(.system(size: 12, weight: .black, design: .rounded))
-                            .foregroundColor(.orange)
+                        HStack(alignment: .firstTextBaseline, spacing: 2) {
+                            Text(workoutSet.reps)
+                                .foregroundColor(.orange)
+                            Text("REPS")
+                                .foregroundColor(.secondary)
+                        }
+                        .font(.system(size: 14, weight: .black, design: .rounded))
 
                         if workoutSet.isCompleted {
-                            Text("\(workoutSet.actualReps) REPS")
+                            Text("DONE: \(workoutSet.actualReps)")
                                 .font(.system(size: 12, weight: .bold))
                                 .foregroundColor(.secondary)
                         }
                     }
                 } else {
-                    Text("\(workoutSet.reps) REPS")
-                        .font(.system(size: 14, weight: .black, design: .rounded))
-                        .foregroundColor(.secondary)
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        Text("\(workoutSet.reps)")
+                            .foregroundColor(.orange)
+                        Text("REPS")
+                            .foregroundColor(.secondary)
+                    }
+                    .font(.system(size: 14, weight: .black, design: .rounded))
                 }
+
             }
 
             Spacer()

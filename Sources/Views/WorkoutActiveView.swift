@@ -32,37 +32,41 @@ struct WorkoutActiveView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            headerView()
+            if selectedTab < steps.count {
+                headerView()
+            }
 
             contentView()
             .tabViewStyle(.page(indexDisplayMode: .never))
 
-            // Real-time Stats Footer
-            HStack {
-                HStack(spacing: 2) {
-                    Image(systemName: "heart.fill")
-                        .foregroundColor(.red)
-                        .font(.system(size: 10))
-                    Text("\(Int(workoutManager.heartRate))")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                    Text("BPM")
-                        .font(.system(size: 7, weight: .bold))
-                        .foregroundColor(.secondary)
-                }
+            if selectedTab < steps.count {
+                // Real-time Stats Footer - Hidden on Summary Tab to avoid redundancy
+                HStack {
+                    HStack(spacing: 2) {
+                        Image(systemName: "heart.fill")
+                            .foregroundColor(.red)
+                            .font(.system(size: 10))
+                        Text(workoutManager.heartRate > 0 ? "\(Int(workoutManager.heartRate))" : "—")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                        Text("BPM")
+                            .font(.system(size: 7, weight: .bold))
+                            .foregroundColor(.secondary)
+                    }
 
-                Spacer()
+                    Spacer()
 
-                HStack(spacing: 4) {
-                    Image(systemName: "timer")
-                        .foregroundColor(.purple)
-                        .font(.system(size: 10))
-                    Text(workoutManager.elapsedTimeString)
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                    HStack(spacing: 4) {
+                        Image(systemName: "timer")
+                            .foregroundColor(.purple)
+                            .font(.system(size: 10))
+                        Text(workoutManager.elapsedTimeString)
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                    }
                 }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 2)
+                .background(Color.black.opacity(0.3))
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 2)
-            .background(Color.black.opacity(0.3))
         }
         .containerBackground(lift.color.gradient, for: .navigation)
         .onAppear {
@@ -102,6 +106,14 @@ struct WorkoutActiveView: View {
             }
         }
         .animation(.spring(), value: showRestTimer)
+        .alert("Finish Workout?", isPresented: $showFinishConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Finish", role: .destructive) {
+                triggerCelebration()
+            }
+        } message: {
+            Text("This will save your session and advance your program.")
+        }
     }
 }
 

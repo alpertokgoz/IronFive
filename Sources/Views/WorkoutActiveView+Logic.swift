@@ -206,6 +206,7 @@ extension WorkoutActiveView {
                     selectedTab: $selectedTab,
                     nextTab: index + 1,
                     workoutSessions: workoutSessions,
+                    weightUnit: profile.weightUnit,
                     onRestStart: startRestTimer,
                     onPlateCalc: { weight in selectedWeightForCalc = weight }
                 )
@@ -227,14 +228,6 @@ extension WorkoutActiveView {
                 onFinish: { showFinishConfirmation = true }
             )
             .tag(steps.count)
-            .alert("Finish Workout?", isPresented: $showFinishConfirmation) {
-                Button("Cancel", role: .cancel) { }
-                Button("Finish", role: .destructive) {
-                    triggerCelebration()
-                }
-            } message: {
-                Text("This will save your session and advance your program.")
-            }
         }
     }
 
@@ -242,28 +235,38 @@ extension WorkoutActiveView {
         VStack(spacing: 0) {
             // Primary Title Row: Lift Icon + Name
             HStack(alignment: .center, spacing: 4) {
-                if let icon = steps.indices.contains(selectedTab) ? steps[selectedTab].liftIcon : nil {
-                    Image(systemName: icon)
-                        .font(.system(size: 10, weight: .black))
-                        .foregroundStyle(lift.color.gradient)
-                }
-
-                Text("\(lift.name.uppercased())")
-                    .font(.system(size: 11, weight: .black, design: .rounded))
-
                 if steps.indices.contains(selectedTab) {
-                    Text("· \(steps[selectedTab].title.uppercased())")
-                        .font(.system(size: 8, weight: .bold, design: .rounded))
-                        .foregroundColor(.secondary)
+                    let step = steps[selectedTab]
+                    let isAccessory = !isStandardPhase(step.title)
+
+                    if let icon = step.liftIcon {
+                        Image(systemName: icon)
+                            .font(.system(size: 10, weight: .black))
+                            .foregroundStyle(lift.color.gradient)
+                    }
+
+                    Text(isAccessory ? step.title.uppercased() : lift.name.uppercased())
+                        .font(.system(size: 12, weight: .black, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                } else {
+                    Text(lift.name.uppercased())
+                        .font(.system(size: 12, weight: .black, design: .rounded))
                 }
             }
             .padding(.top, 2)
 
-            // Secondary Stat Row: Cycle + Progress Bar
+            // Secondary Stat Row: Cycle + Phase/Day + Progress Bar
             HStack(alignment: .center, spacing: 6) {
-                Text("C\(profile.currentCycle) · \(weekAbbreviation(for: profile.currentWeek).uppercased())")
+                let isAcc = steps.indices.contains(selectedTab) && !isStandardPhase(steps[selectedTab].title)
+                let stepTitle = steps.indices.contains(selectedTab) ? steps[selectedTab].title.uppercased() : ""
+                let subtitle = isAcc ? "C\(profile.currentCycle): \(weekAbbreviation(for: profile.currentWeek).uppercased()) - \(lift.name.uppercased()) DAY" : "C\(profile.currentCycle): \(weekAbbreviation(for: profile.currentWeek).uppercased()) - \(stepTitle)"
+
+                Text(subtitle)
                     .font(.system(size: 7, weight: .black, design: .rounded))
                     .foregroundColor(.accentColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
 
                 Spacer()
 
@@ -283,5 +286,10 @@ extension WorkoutActiveView {
             .padding(.bottom, 2)
             .background(Color.black.opacity(0.6))
         }
+    }
+
+    private func isStandardPhase(_ title: String) -> Bool {
+        let standard = ["Warmup", "Main", profile.selectedTemplate.shortName]
+        return standard.contains(title)
     }
 }

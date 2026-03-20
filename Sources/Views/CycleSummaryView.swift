@@ -20,81 +20,81 @@ struct CycleSummaryView: View {
     @State private var selectedTemplate: SupplementalTemplate = .fsl
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 12) {
-                VStack(spacing: 2) {
-                    Text("CYCLE \(profile.currentCycle) COMPLETE")
-                        .font(.system(size: 8, weight: .bold, design: .rounded))
-                        .foregroundColor(.accentColor)
+        VStack(spacing: 8) {
+            VStack(spacing: 0) {
+                Text("CYCLE \(profile.currentCycle) COMPLETE")
+                    .font(.system(size: 7, weight: .bold, design: .rounded))
+                    .foregroundColor(.accentColor)
 
-                    Text("AUTO-REGULATION")
-                        .font(.system(size: 14, weight: .black, design: .rounded))
+                Text("AUTO-REGULATION")
+                    .font(.system(size: 13, weight: .black, design: .rounded))
+            }
+            .padding(.top, 2)
+
+            if amrapReps > 0 {
+                HStack(spacing: 6) {
+                    Image(systemName: lastLift.symbolName)
+                        .font(.system(size: 10))
+                        .foregroundColor(lastLift.color)
+                    Text("\(amrapReps) × \(Int(amrapWeight))\(profile.weightUnit.label)")
+                        .font(.system(size: 11, weight: .black, design: .rounded))
                 }
-                .padding(.top, 4)
+                .padding(.vertical, 4)
+                .padding(.horizontal, 8)
+                .background(Color.white.opacity(0.05))
+                .cornerRadius(6)
+            }
 
-                if amrapReps > 0 {
-                    HStack(spacing: 8) {
-                        Image(systemName: lastLift.symbolName)
-                            .foregroundColor(lastLift.color)
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text("LAST AMRAP")
-                                .font(.system(size: 6, weight: .bold))
-                                .foregroundColor(.secondary)
-                            Text("\(amrapReps) × \(Int(amrapWeight)) kg")
-                                .font(.system(size: 12, weight: .black, design: .rounded))
-                        }
-                    }
-                    .padding(6)
-                    .background(Color.white.opacity(0.05))
-                    .cornerRadius(8)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("SUGGESTED TMS")
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundColor(.secondary)
+
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 4) {
+                    CompactTMBox(lift: .squat, old: profile.squatTM, new: $suggestedSquat, unit: profile.weightUnit)
+                    CompactTMBox(lift: .bench, old: profile.benchTM, new: $suggestedBench, unit: profile.weightUnit)
+                    CompactTMBox(lift: .deadlift, old: profile.deadliftTM, new: $suggestedDeadlift, unit: profile.weightUnit)
+                    CompactTMBox(lift: .ohp, old: profile.ohpTM, new: $suggestedOHP, unit: profile.weightUnit)
                 }
+            }
+            .padding(.horizontal, 4)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("SUGGESTED TMS")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundColor(.secondary)
-
-                    TMRow(lift: .squat, old: profile.squatTM, new: $suggestedSquat)
-                    TMRow(lift: .bench, old: profile.benchTM, new: $suggestedBench)
-                    TMRow(lift: .deadlift, old: profile.deadliftTM, new: $suggestedDeadlift)
-                    TMRow(lift: .ohp, old: profile.ohpTM, new: $suggestedOHP)
-                }
-                .padding(.horizontal, 4)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("NEXT CYCLE TEMPLATE")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundColor(.secondary)
-
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
                     Picker("Template", selection: $selectedTemplate) {
                         ForEach(SupplementalTemplate.allCases, id: \.self) { template in
                             Text(template.shortName).tag(template)
                         }
                     }
                     .pickerStyle(.navigationLink)
+                    .labelsHidden()
+                    .frame(height: 32)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.1)))
 
                     NavigationLink(destination: AccessorySettingsView()) {
-                        HStack {
-                            Image(systemName: "slider.horizontal.3")
-                            Text("Customise Accessories")
-                        }
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                        .frame(maxWidth: .infinity, minHeight: 32)
-                        .background(Color.white.opacity(0.1))
-                        .cornerRadius(8)
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.system(size: 12))
+                            .frame(width: 44, height: 32)
+                            .background(Color.white.opacity(0.1))
+                            .cornerRadius(8)
                     }
                     .buttonStyle(.plain)
                 }
-                .padding(.horizontal, 4)
-
-                Button("CONFIRM & START") {
-                    saveAndAdvance()
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.green)
             }
-            .padding()
+            .padding(.horizontal, 4)
+
+            Spacer(minLength: 0)
+
+            Button("CONFIRM & START") {
+                saveAndAdvance()
+            }
+            .font(.system(size: 13, weight: .black, design: .rounded))
+            .buttonStyle(.borderedProminent)
+            .tint(.green)
+            .frame(height: 36)
         }
+        .padding(.horizontal, 8)
+        .padding(.bottom, 2)
         .containerBackground(Color.black.gradient, for: .navigation)
         .onAppear {
             calculateSuggestions()
@@ -102,30 +102,27 @@ struct CycleSummaryView: View {
         }
     }
 
-    private func TMRow(lift: MainLift, old: Double, new: Binding<Double>) -> some View {
-        HStack {
-            Image(systemName: lift.symbolName)
-                .font(.system(size: 10))
-                .foregroundColor(lift.color)
-            Text(lift.name)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-            Spacer()
-            HStack(spacing: 4) {
-                Text("\(Int(old))")
+    private func CompactTMBox(lift: MainLift, old: Double, new: Binding<Double>, unit: WeightUnit) -> some View {
+        VStack(spacing: 2) {
+            HStack(spacing: 3) {
+                Image(systemName: lift.symbolName)
                     .font(.system(size: 8))
-                    .foregroundColor(.secondary)
-                    .strikethrough()
-
-                Text("\(Int(new.wrappedValue))")
-                    .font(.system(size: 12, weight: .black, design: .rounded))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(lift.color.opacity(0.15))
-                    .cornerRadius(4)
-                    .focusable()
-                    .digitalCrownRotation(new, from: 0, through: 1000, by: profile.weightUnit.roundTo, sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
+                    .foregroundColor(lift.color)
+                Text(lift.shortName)
+                    .font(.system(size: 8, weight: .black))
             }
+
+            Text("\(Int(new.wrappedValue))")
+                .font(.system(size: 14, weight: .black, design: .rounded))
+                .frame(maxWidth: .infinity, minHeight: 24)
+                .background(lift.color.opacity(0.15))
+                .cornerRadius(4)
+                .focusable()
+                .digitalCrownRotation(new, from: 0, through: 1000, by: unit.roundTo, sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
         }
+        .padding(4)
+        .background(Color.white.opacity(0.05))
+        .cornerRadius(6)
     }
 
     private func calculateSuggestions() {

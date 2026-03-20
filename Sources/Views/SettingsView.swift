@@ -5,10 +5,10 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var userProfiles: [UserProfile]
 
-    @State private var squatTM: String = ""
-    @State private var benchTM: String = ""
-    @State private var deadliftTM: String = ""
-    @State private var ohpTM: String = ""
+    @State private var squatTM: Double = 0
+    @State private var benchTM: Double = 0
+    @State private var deadliftTM: Double = 0
+    @State private var ohpTM: Double = 0
     @State private var selectedTemplate: SupplementalTemplate = .fsl
     @State private var selectedUnit: WeightUnit = .lbs
     @State private var usesFourWeekCycle: Bool = false
@@ -16,33 +16,37 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section(header: Text("Training Maxes (TM)").font(.footnote).fontWeight(.bold).kerning(1.2)) {
-                HStack {
-                    Text("Squat")
-                    Spacer()
-                    TextField("0", text: $squatTM)
-                        .multilineTextAlignment(.trailing)
-                        .foregroundColor(.orange)
+                Stepper(value: $squatTM, in: 0...1000, step: 2.5) {
+                    HStack {
+                        Text("Squat")
+                        Spacer()
+                        Text(String(format: "%.1f", squatTM))
+                            .foregroundColor(.orange)
+                    }
                 }
-                HStack {
-                    Text("Bench")
-                    Spacer()
-                    TextField("0", text: $benchTM)
-                        .multilineTextAlignment(.trailing)
-                        .foregroundColor(.blue)
+                Stepper(value: $benchTM, in: 0...1000, step: 2.5) {
+                    HStack {
+                        Text("Bench")
+                        Spacer()
+                        Text(String(format: "%.1f", benchTM))
+                            .foregroundColor(.blue)
+                    }
                 }
-                HStack {
-                    Text("Deadlift")
-                    Spacer()
-                    TextField("0", text: $deadliftTM)
-                        .multilineTextAlignment(.trailing)
-                        .foregroundColor(.green)
+                Stepper(value: $deadliftTM, in: 0...1000, step: 2.5) {
+                    HStack {
+                        Text("Deadlift")
+                        Spacer()
+                        Text(String(format: "%.1f", deadliftTM))
+                            .foregroundColor(.green)
+                    }
                 }
-                HStack {
-                    Text("OHP")
-                    Spacer()
-                    TextField("0", text: $ohpTM)
-                        .multilineTextAlignment(.trailing)
-                        .foregroundColor(.purple)
+                Stepper(value: $ohpTM, in: 0...1000, step: 2.5) {
+                    HStack {
+                        Text("OHP")
+                        Spacer()
+                        Text(String(format: "%.1f", ohpTM))
+                            .foregroundColor(.purple)
+                    }
                 }
             }
             .listRowBackground(Color.white.opacity(0.05))
@@ -88,10 +92,10 @@ struct SettingsView: View {
 
     private func loadProfile() {
         guard let profile = userProfiles.first else { return }
-        squatTM = String(format: "%.1f", profile.squatTM)
-        benchTM = String(format: "%.1f", profile.benchTM)
-        deadliftTM = String(format: "%.1f", profile.deadliftTM)
-        ohpTM = String(format: "%.1f", profile.ohpTM)
+        squatTM = profile.squatTM
+        benchTM = profile.benchTM
+        deadliftTM = profile.deadliftTM
+        ohpTM = profile.ohpTM
         selectedTemplate = profile.selectedTemplate
         selectedUnit = profile.weightUnit
         usesFourWeekCycle = profile.usesFourWeekCycle
@@ -99,10 +103,10 @@ struct SettingsView: View {
 
     private func saveProfile() {
         if let profile = userProfiles.first {
-            profile.squatTM = Double(squatTM) ?? 0
-            profile.benchTM = Double(benchTM) ?? 0
-            profile.deadliftTM = Double(deadliftTM) ?? 0
-            profile.ohpTM = Double(ohpTM) ?? 0
+            profile.squatTM = squatTM
+            profile.benchTM = benchTM
+            profile.deadliftTM = deadliftTM
+            profile.ohpTM = ohpTM
             profile.selectedTemplate = selectedTemplate
             profile.weightUnit = selectedUnit
             profile.usesFourWeekCycle = usesFourWeekCycle

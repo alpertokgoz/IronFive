@@ -7,6 +7,7 @@ struct WorkoutStepView: View {
     @Binding var selectedTab: Int
     let nextTab: Int
     let workoutSessions: [WorkoutSession]
+    let weightUnit: WeightUnit
     var onRestStart: () -> Void
     var onPlateCalc: (Double) -> Void
 
@@ -40,35 +41,27 @@ struct WorkoutStepView: View {
 
                 Spacer()
 
-                Button(action: {
-                    withAnimation { selectedTab = nextTab }
-                }) {
-                    Text("SKIP")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundColor(.white.opacity(0.6))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Capsule().stroke(Color.white.opacity(0.3), lineWidth: 1))
-                }
-                .buttonStyle(.plain)
+                Image(systemName: "chevron.right.2")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(.white.opacity(0.3))
             }
             .padding(.horizontal, 8)
             .padding(.top, 4)
 
             Spacer(minLength: 0)
 
-            // PR Goal Badge
+            // Last Performance / PR Goal Badge
             if step.isAMRAP {
-                if let prReps = calculateRepsToBeatPR() {
+                if let last = getLastAmrapPerformance() {
                     HStack(spacing: 4) {
-                        Image(systemName: "crown.fill")
-                        Text("GOAL: \(prReps) REPS")
+                        Image(systemName: "clock.arrow.circlepath")
+                        Text("LAST: \(last.reps) × \(Int(last.weight))\(weightUnit.label)")
                     }
-                    .font(.system(size: 9, weight: .black, design: .rounded))
-                    .foregroundColor(.yellow)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.yellow.opacity(0.15))
+                    .font(.system(size: 8, weight: .black, design: .rounded))
+                    .foregroundColor(.orange)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.orange.opacity(0.15))
                     .cornerRadius(4)
                     .padding(.bottom, 2)
                 }
@@ -78,7 +71,7 @@ struct WorkoutStepView: View {
                 workoutSet: $step.workoutSet,
                 isAMRAP: step.isAMRAP,
                 lift: lift,
-                prGoal: step.isAMRAP ? calculateRepsToBeatPR() : nil,
+                prGoal: nil, // We show last performance above instead
                 onComplete: onRestStart,
                 onPlateCalc: { onPlateCalc(step.workoutSet.weight) }
             )
@@ -90,8 +83,25 @@ struct WorkoutStepView: View {
                 )
         }
         .padding(.bottom, 2)
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 50, coordinateSpace: .local)
+                .onEnded { value in
+                    if value.translation.width < -50 {
+                        WKInterfaceDevice.current().play(.directionUp)
+                        withAnimation { selectedTab = nextTab }
+                    }
+                }
+        )
     }
 
+    private func getLastAmrapPerformance() -> (reps: Int, weight: Double)? {
+        let lastSession = workoutSessions.first { $0.mainLift == lift && $0.isCompleted }
+        guard let last = lastSession, last.amrapReps > 0 else { return nil }
+        return (last.amrapReps, last.amrapWeight)
+    }
+
+    // Keeping calculateRepsToBeatPR for internal logic if needed later, but removing from UI
     private func calculateRepsToBeatPR() -> Int? {
         let liftSessions = workoutSessions.filter { $0.mainLift == lift && $0.isCompleted }
         let currentBestE1RM = liftSessions.map { $0.estimated1RM }.max() ?? 0
@@ -101,8 +111,6 @@ struct WorkoutStepView: View {
         let weight = step.workoutSet.weight
         if weight == 0 { return nil }
 
-        // Epley: e1RM = W * (1 + 0.0333 * R)
-        // R = (e1RM / W - 1) / 0.0333
         let neededReps = (currentBestE1RM / weight - 1) / 0.0333
         let target = Int(ceil(neededReps))
         return max(target, 1)

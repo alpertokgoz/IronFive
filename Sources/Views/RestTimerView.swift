@@ -5,6 +5,8 @@ struct RestTimerView: View {
     @Binding var isPresented: Bool
     var onDismiss: () -> Void
 
+    @State private var initialTime: Int = 0
+
     var body: some View {
         ZStack {
             Color.black.opacity(0.9).ignoresSafeArea()
@@ -19,7 +21,7 @@ struct RestTimerView: View {
                     Circle()
                         .stroke(Color.white.opacity(0.1), lineWidth: 8)
                     Circle()
-                        .trim(from: 0, to: Double(timeRemaining) / 90.0)
+                        .trim(from: 0, to: Double(timeRemaining) / Double(max(initialTime, 1)))
                         .stroke(Color.green, style: StrokeStyle(lineWidth: 8, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                         .animation(.linear(duration: 1.0), value: timeRemaining)
@@ -34,6 +36,24 @@ struct RestTimerView: View {
                     }
                 }
                 .frame(width: 100, height: 100)
+                .onAppear {
+                    if initialTime == 0 {
+                        initialTime = timeRemaining
+                    }
+                }
+
+                HStack(spacing: 12) {
+                    Button(action: {
+                        timeRemaining += 30
+                        initialTime = max(initialTime, timeRemaining)
+                    }) {
+                        Text("+30s")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .frame(width: 50, height: 28)
+                            .background(Capsule().fill(Color.white.opacity(0.1)))
+                    }
+                    .buttonStyle(.plain)
+                }
 
                 Button(action: {
                     withAnimation {
