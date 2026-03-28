@@ -7,87 +7,108 @@ struct WorkoutSummaryView: View {
     let showCelebration: Bool
     let onFinish: () -> Void
 
+    @State private var animateEmoji = false
+
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack(spacing: 4) {
-                Image(systemName: "trophy.fill")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.yellow.gradient)
-                Text(showCelebration ? "NEW PR!" : "WORKOUT SAVED")
-                    .font(.system(size: 11, weight: .black, design: .rounded))
-                    .foregroundColor(showCelebration ? .yellow : .white)
-            }
-            .padding(.top, 4)
-            .padding(.bottom, 6)
-
-            // Hero Stat: Volume
-            VStack(alignment: .leading, spacing: 0) {
-                Text("TOTAL VOLUME")
-                    .font(.system(size: 8, weight: .black, design: .rounded))
-                    .foregroundColor(.accentColor)
-                    .opacity(0.8)
-
-                HStack(alignment: .firstTextBaseline, spacing: 2) {
-                    Text("\(Int(totalWeight))")
-                        .font(.system(size: 24, weight: .black, design: .rounded))
-                    Text(profile.weightUnit.label.uppercased())
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.secondary)
-                }
-            }
-            .padding(.vertical, 10)
-            .padding(.horizontal, 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color.accentColor.opacity(0.1))
-                    Rectangle()
-                        .fill(Color.accentColor)
-                        .frame(width: 3)
-                        .cornerRadius(1.5)
-                        .padding(.vertical, 8)
-                        .padding(.leading, 0)
-                }
-            )
-            .padding(.horizontal, 4)
-            .padding(.bottom, 8)
-
-            // Health Stats Row
-            HStack(spacing: 6) {
-                CompactStatBox(
-                    label: "KCAL",
-                    value: workoutManager.activeEnergy > 0 ? "\(Int(workoutManager.activeEnergy))" : "—",
-                    icon: "flame.fill",
-                    color: .orange
-                )
-                CompactStatBox(
-                    label: "BPM",
-                    value: workoutManager.heartRate > 0 ? "\(Int(workoutManager.heartRate))" : "—",
-                    icon: "heart.fill",
-                    color: .red
-                )
-            }
-            .padding(.horizontal, 4)
+            celebrationHeader()
+            durationHero()
+            statsRow()
 
             Spacer(minLength: 0)
 
-            // Finish Button
-            Button(action: onFinish) {
-                Text("FINISH")
-                    .font(.system(size: 15, weight: .black, design: .rounded))
-                    .frame(maxWidth: .infinity, minHeight: 40)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.green)
-            .padding(.horizontal, 4)
-            .padding(.bottom, 4)
+            finishButton()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .containerBackground(Color.black.gradient, for: .navigation)
+        .onAppear {
+            withAnimation(
+                .interpolatingSpring(stiffness: 120, damping: 8)
+                .delay(0.2)
+            ) {
+                animateEmoji = true
+            }
+        }
     }
 
+    // MARK: - Header
+
+    @ViewBuilder
+    private func celebrationHeader() -> some View {
+        VStack(spacing: 0) {
+            Text(showCelebration ? "🏆" : "💪")
+                .font(.system(size: 28))
+                .scaleEffect(animateEmoji ? 1.0 : 0.3)
+                .opacity(animateEmoji ? 1.0 : 0.0)
+
+            Text(showCelebration ? "NEW PR!" : "GREAT WORK!")
+                .font(.system(size: 13, weight: .black, design: .rounded))
+                .foregroundStyle(
+                    showCelebration
+                        ? AnyShapeStyle(.yellow.gradient)
+                        : AnyShapeStyle(.white)
+                )
+        }
+        .padding(.top, 2)
+        .padding(.bottom, 4)
+    }
+
+    // MARK: - Duration Hero
+
+    @ViewBuilder
+    private func durationHero() -> some View {
+        VStack(spacing: -2) {
+            Text(workoutManager.elapsedTimeString)
+                .font(.system(size: 28, weight: .black, design: .rounded))
+                .monospacedDigit()
+            Text("DURATION")
+                .font(.system(size: 8, weight: .black, design: .rounded))
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 4)
+        .background(Color.white.opacity(0.06))
+        .cornerRadius(12)
+        .padding(.horizontal, 4)
+        .padding(.bottom, 4)
+    }
+
+    // MARK: - Stats Row
+
+    @ViewBuilder
+    private func statsRow() -> some View {
+        HStack(spacing: 6) {
+            CompactStatBox(
+                label: "KCAL",
+                value: workoutManager.activeEnergy > 0
+                    ? "\(Int(workoutManager.activeEnergy))" : "—",
+                icon: "flame.fill",
+                color: .orange
+            )
+            CompactStatBox(
+                label: profile.weightUnit.label.uppercased(),
+                value: "\(Int(totalWeight))",
+                icon: "dumbbell.fill",
+                color: .blue
+            )
+        }
+        .padding(.horizontal, 4)
+    }
+
+    // MARK: - Finish Button
+
+    @ViewBuilder
+    private func finishButton() -> some View {
+        Button(action: onFinish) {
+            Label("FINISH", systemImage: "checkmark")
+                .font(.system(size: 14, weight: .black, design: .rounded))
+                .frame(maxWidth: .infinity, minHeight: 32)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(.green)
+        .padding(.horizontal, 4)
+        .padding(.bottom, 2)
+    }
 }
 
 struct CompactStatBox: View {
@@ -110,10 +131,10 @@ struct CompactStatBox: View {
             }
             Spacer()
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 4)
         .padding(.horizontal, 10)
         .frame(maxWidth: .infinity)
         .background(Color.white.opacity(0.08))
-        .cornerRadius(12)
+        .cornerRadius(10)
     }
 }

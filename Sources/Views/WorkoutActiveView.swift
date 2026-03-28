@@ -108,11 +108,11 @@ struct WorkoutActiveView: View {
         .animation(.spring(), value: showRestTimer)
         .alert("Finish Workout?", isPresented: $showFinishConfirmation) {
             Button("Cancel", role: .cancel) { }
-            Button("Finish", role: .destructive) {
+            Button("Save & Exit") {
                 triggerCelebration()
             }
         } message: {
-            Text("This will save your session and advance your program.")
+            Text("Your session will be saved.")
         }
     }
 }
