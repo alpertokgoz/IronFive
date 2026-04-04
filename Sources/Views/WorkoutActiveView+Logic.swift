@@ -137,7 +137,20 @@ extension WorkoutActiveView {
 
     func advanceTab() {
         if selectedTab < steps.count {
-            WKInterfaceDevice.current().play(.directionUp)
+            let currentStep = steps[selectedTab]
+            let nextIndex = selectedTab + 1
+
+            if nextIndex < steps.count {
+                let nextStep = steps[nextIndex]
+                if nextStep.title != currentStep.title {
+                    WKInterfaceDevice.current().play(.success)
+                } else {
+                    WKInterfaceDevice.current().play(.directionUp)
+                }
+            } else {
+                WKInterfaceDevice.current().play(.notification)
+            }
+
             withAnimation(.spring()) {
                 selectedTab += 1
             }

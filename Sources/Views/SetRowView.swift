@@ -143,11 +143,7 @@ struct SetRowView: View {
     }
 
     private func markCompleted() {
-        if let goal = prGoal, workoutSet.actualReps >= goal {
-            WKInterfaceDevice.current().play(.notification)
-        } else {
-            WKInterfaceDevice.current().play(.success)
-        }
+        WKInterfaceDevice.current().play(.directionUp)
 
         withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
             scale = 0.9
