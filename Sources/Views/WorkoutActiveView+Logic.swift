@@ -14,6 +14,13 @@ extension WorkoutActiveView {
     }
 
     func setupWorkout() {
+        if let session = fetchActiveSession(),
+           let decodedSteps = try? JSONDecoder().decode([WorkoutStep].self, from: session.stepsData) {
+            self.steps = decodedSteps
+            self.selectedTab = session.currentStepIndex
+            return
+        }
+
         let sets = WorkoutCalculator.generateWorkout(for: lift, profile: profile, accessories: accessories)
         let week = profile.currentWeek
 
@@ -24,6 +31,33 @@ extension WorkoutActiveView {
         addAccessorySteps(to: &newSteps, from: sets.accessorySets)
 
         self.steps = newSteps
+        saveActiveSession()
+    }
+
+    func saveActiveSession() {
+        if let data = try? JSONEncoder().encode(steps) {
+            if let existing = fetchActiveSession() {
+                existing.stepsData = data
+                existing.currentStepIndex = selectedTab
+            } else {
+                let newSession = ActiveWorkoutSession(mainLift: lift, steps: steps, currentStepIndex: selectedTab)
+                modelContext.insert(newSession)
+            }
+            try? modelContext.save()
+        }
+    }
+
+    func fetchActiveSession() -> ActiveWorkoutSession? {
+        let liftVal = lift.rawValue
+        let descriptor = FetchDescriptor<ActiveWorkoutSession>(predicate: #Predicate { $0.mainLiftValue == liftVal })
+        return try? modelContext.fetch(descriptor).first
+    }
+
+    func deleteActiveSession() {
+        if let existing = fetchActiveSession() {
+            modelContext.delete(existing)
+            try? modelContext.save()
+        }
     }
 
     private func addWarmupSteps(to steps: inout [WorkoutStep], from workoutSets: [WorkoutSet]) {
@@ -153,6 +187,7 @@ extension WorkoutActiveView {
 
             withAnimation(.spring()) {
                 selectedTab += 1
+                saveActiveSession()
             }
         }
     }
@@ -170,6 +205,7 @@ extension WorkoutActiveView {
 
     func finishWorkout() {
         workoutManager.endWorkout()
+        deleteActiveSession()
         let maxWeek = profile.usesFourWeekCycle ? 4 : 3
 
         let amrapStep = steps.last { $0.title == "Main" && $0.workoutSet.reps.contains("+") && $0.workoutSet.isCompleted }
@@ -229,7 +265,8 @@ extension WorkoutActiveView {
                     workoutSessions: workoutSessions,
                     weightUnit: profile.weightUnit,
                     onRestStart: startRestTimer,
-                    onPlateCalc: { weight in selectedWeightForCalc = weight }
+                    onPlateCalc: { weight in selectedWeightForCalc = weight },
+                    onSave: { saveActiveSession() }
                 )
                 .tag(index)
             }
