@@ -12,46 +12,49 @@ struct WorkoutStepView: View {
     var onPlateCalc: (Double) -> Void
 
     @Environment(WorkoutManager.self) var workoutManager
+    @Environment(\.isLuminanceReduced) var isLuminanceReduced
 
     var body: some View {
         VStack(spacing: 2) {
-            // Moved progress and skip above the main card to prevent clipping
-            HStack(alignment: .bottom) {
-                VStack(alignment: .leading, spacing: 3) {
-                    let currentPhaseSteps = allSteps.filter { $0.title == step.title }
-                    let currentIdx = currentPhaseSteps.firstIndex(where: { $0.id == step.id }) ?? 0
+            if !isLuminanceReduced {
+                // Moved progress and skip above the main card to prevent clipping
+                HStack(alignment: .bottom) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        let currentPhaseSteps = allSteps.filter { $0.title == step.title }
+                        let currentIdx = currentPhaseSteps.firstIndex(where: { $0.id == step.id }) ?? 0
 
-                    Text("\(currentIdx + 1)/\(currentPhaseSteps.count)")
-                        .font(.system(size: 10, weight: .black, design: .rounded))
-                        .foregroundColor(.white.opacity(0.6))
+                        Text("\(currentIdx + 1)/\(currentPhaseSteps.count)")
+                            .font(.system(size: 10, weight: .black, design: .rounded))
+                            .foregroundColor(.white.opacity(0.6))
 
-                    HStack(spacing: 3) {
-                        ForEach(0..<currentPhaseSteps.count, id: \.self) { i in
-                            let s = currentPhaseSteps[i]
-                            let isCurrent = (s.id == step.id)
-                            let isCompleted = s.workoutSet.isCompleted
+                        HStack(spacing: 3) {
+                            ForEach(0..<currentPhaseSteps.count, id: \.self) { i in
+                                let s = currentPhaseSteps[i]
+                                let isCurrent = (s.id == step.id)
+                                let isCompleted = s.workoutSet.isCompleted
 
-                            Capsule()
-                                .fill(isCurrent ? .white : (isCompleted ? .green : .white.opacity(0.15)))
-                                .frame(width: isCurrent ? 12 : 6, height: 3)
-                                .animation(.spring(), value: isCurrent)
+                                Capsule()
+                                    .fill(isCurrent ? .white : (isCompleted ? .green : .white.opacity(0.15)))
+                                    .frame(width: isCurrent ? 12 : 6, height: 3)
+                                    .animation(.spring(), value: isCurrent)
+                            }
                         }
                     }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right.2")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(.white.opacity(0.4))
                 }
-
-                Spacer()
-
-                Image(systemName: "chevron.right.2")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(.white.opacity(0.4))
+                .padding(.horizontal, 8)
+                .padding(.top, 4)
             }
-            .padding(.horizontal, 8)
-            .padding(.top, 4)
 
             Spacer(minLength: 0)
 
             // Last Performance / PR Goal Badge
-            if step.isAMRAP {
+            if step.isAMRAP && !isLuminanceReduced {
                 if let last = getLastAmrapPerformance() {
                     HStack(spacing: 4) {
                         Image(systemName: "clock.arrow.circlepath")
@@ -82,6 +85,7 @@ struct WorkoutStepView: View {
                         .stroke(step.isAMRAP ? Color.orange.opacity(0.5) : Color.clear, lineWidth: 2)
                         .padding(.horizontal, 4)
                 )
+                .opacity(isLuminanceReduced ? 0.6 : 1.0)
         }
         .padding(.bottom, 2)
         .contentShape(Rectangle())

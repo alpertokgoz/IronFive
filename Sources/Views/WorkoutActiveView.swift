@@ -31,6 +31,8 @@ struct WorkoutActiveView: View {
     @State var finalAmrapReps = 0
     @State var finalAmrapWeight = 0.0
 
+    @Environment(\.isLuminanceReduced) var isLuminanceReduced
+
     var body: some View {
         VStack(spacing: 0) {
             if selectedTab < steps.count {
@@ -40,7 +42,7 @@ struct WorkoutActiveView: View {
             contentView()
             .tabViewStyle(.page(indexDisplayMode: .never))
 
-            if selectedTab < steps.count {
+            if selectedTab < steps.count && !isLuminanceReduced {
                 // Real-time Stats Footer - Hidden on Summary Tab to avoid redundancy
                 HStack {
                     HStack(spacing: 2) {

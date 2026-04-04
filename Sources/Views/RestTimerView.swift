@@ -7,6 +7,7 @@ struct RestTimerView: View {
     var liftColor: Color = .orange
     var onDismiss: () -> Void
 
+    @Environment(\.isLuminanceReduced) var isLuminanceReduced
     @State private var initialTime: Int = 0
 
     private var progress: Double {
@@ -21,7 +22,7 @@ struct RestTimerView: View {
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.92).ignoresSafeArea()
+            Color.black.opacity(isLuminanceReduced ? 1.0 : 0.92).ignoresSafeArea()
 
             VStack(spacing: 10) {
                 Text("REST")
@@ -31,16 +32,19 @@ struct RestTimerView: View {
 
                 ZStack {
                     Circle()
-                        .stroke(Color.white.opacity(0.1), lineWidth: 8)
-                    Circle()
-                        .trim(from: 0, to: progress)
-                        .stroke(ringColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                        .animation(.linear(duration: 1.0), value: timeRemaining)
+                        .stroke(Color.white.opacity(0.1), lineWidth: isLuminanceReduced ? 2 : 8)
+
+                    if !isLuminanceReduced {
+                        Circle()
+                            .trim(from: 0, to: progress)
+                            .stroke(ringColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                            .animation(.linear(duration: 1.0), value: timeRemaining)
+                    }
 
                     VStack(spacing: -4) {
                         Text("\(timeRemaining)")
-                            .font(.system(size: 44, weight: .black, design: .rounded))
+                            .font(.system(size: 44, weight: isLuminanceReduced ? .regular : .black, design: .rounded))
                             .foregroundColor(timeRemaining <= 10 ? .red : .primary)
                             .contentTransition(.numericText())
                         Text("SEC")
@@ -53,45 +57,47 @@ struct RestTimerView: View {
                     if initialTime == 0 { initialTime = timeRemaining }
                 }
 
-                // +30 / -30 row
-                HStack(spacing: 8) {
-                    Button(action: {
-                        timeRemaining = max(5, timeRemaining - 30)
-                    }) {
-                        Text("-30s")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
-                            .frame(width: 46, height: 28)
-                            .background(Capsule().fill(Color.white.opacity(0.08)))
+                if !isLuminanceReduced {
+                    // +30 / -30 row
+                    HStack(spacing: 8) {
+                        Button(action: {
+                            timeRemaining = max(5, timeRemaining - 30)
+                        }) {
+                            Text("-30s")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .frame(width: 46, height: 28)
+                                .background(Capsule().fill(Color.white.opacity(0.08)))
+                        }
+                        .buttonStyle(.plain)
+
+                        Button(action: {
+                            timeRemaining += 30
+                            initialTime = max(initialTime, timeRemaining)
+                        }) {
+                            Text("+30s")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .frame(width: 46, height: 28)
+                                .background(Capsule().fill(Color.white.opacity(0.08)))
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
 
                     Button(action: {
-                        timeRemaining += 30
-                        initialTime = max(initialTime, timeRemaining)
+                        withAnimation {
+                            isPresented = false
+                            onDismiss()
+                        }
                     }) {
-                        Text("+30s")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
-                            .frame(width: 46, height: 28)
-                            .background(Capsule().fill(Color.white.opacity(0.08)))
+                        HStack {
+                            Image(systemName: "forward.fill")
+                            Text("SKIP")
+                        }
+                        .font(.system(size: 12, weight: .black, design: .rounded))
+                        .frame(width: 90, height: 36)
+                        .background(Capsule().fill(Color.white.opacity(0.15)))
                     }
                     .buttonStyle(.plain)
                 }
-
-                Button(action: {
-                    withAnimation {
-                        isPresented = false
-                        onDismiss()
-                    }
-                }) {
-                    HStack {
-                        Image(systemName: "forward.fill")
-                        Text("SKIP")
-                    }
-                    .font(.system(size: 12, weight: .black, design: .rounded))
-                    .frame(width: 90, height: 36)
-                    .background(Capsule().fill(Color.white.opacity(0.15)))
-                }
-                .buttonStyle(.plain)
             }
         }
         .transition(.move(edge: .bottom).combined(with: .opacity))
