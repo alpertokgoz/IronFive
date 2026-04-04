@@ -33,7 +33,7 @@ struct AmrapInputView: View {
                     .cornerRadius(12)
                     .focusable()
                     .focused($isFocused)
-                    .digitalCrownRotation($reps.toDouble(), from: 0, through: 50, by: 1, sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
+                    .digitalCrownRotation($reps.toDouble(), from: 0, through: 100, by: 1, sensitivity: .medium, isContinuous: false, isHapticFeedbackEnabled: true)
 
                 Text("REPS")
                     .font(.system(size: 12, weight: .bold))

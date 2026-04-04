@@ -11,13 +11,18 @@ struct SetRowView: View {
 
     @FocusState private var isRepFieldFocused: Bool
     @State private var scale: CGFloat = 1.0
+    @FocusState private var isWeightFocused: Bool
+    @State private var crownWeight: Double = 0
     @State private var showParticles = false
     @State private var showAmrapSheet = false
 
     var body: some View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 0) {
-                Button(action: onPlateCalc) {
+                Button(action: {
+                    isWeightFocused = true
+                    onPlateCalc()
+                }) {
                     HStack(alignment: .firstTextBaseline, spacing: 2) {
                         if workoutSet.weight > 0 {
                             Text("\(String(format: "%.1f", workoutSet.weight))")
@@ -31,10 +36,19 @@ struct SetRowView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                    .foregroundStyle(workoutSet.isCompleted ? .secondary : .primary)
+                    .foregroundStyle(workoutSet.isCompleted ? .secondary : (isWeightFocused ? .accentColor : .primary))
                 }
                 .buttonStyle(.plain)
                 .disabled(workoutSet.weight == 0)
+                .focusable()
+                .focused($isWeightFocused)
+                .digitalCrownRotation($crownWeight, from: 0, through: 1000, by: weightUnit.roundTo, sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
+                .onChange(of: crownWeight) { _, newValue in
+                    workoutSet.weight = newValue
+                }
+                .onAppear {
+                    crownWeight = workoutSet.weight
+                }
 
                 if isAMRAP {
                     VStack(alignment: .leading, spacing: 1) {
