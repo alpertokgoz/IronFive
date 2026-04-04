@@ -6,7 +6,7 @@ struct DashboardView: View {
     @Query private var accessories: [AccessoryExercise]
     @Query(sort: \WorkoutSession.date, order: .reverse) private var workoutSessions: [WorkoutSession]
     @Environment(\.modelContext) private var modelContext
-    @EnvironmentObject var workoutManager: WorkoutManager
+    @Environment(WorkoutManager.self) var workoutManager
     @State private var showOnboarding = false
     @State private var showLiftPicker = false
     @State private var overrideLift: MainLift?

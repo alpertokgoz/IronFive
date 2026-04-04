@@ -1,17 +1,20 @@
 import Foundation
 import HealthKit
 import os
+import Observation
+import SwiftUI
 
-class WorkoutManager: NSObject, ObservableObject {
+@Observable
+class WorkoutManager: NSObject {
     let healthStore = HKHealthStore()
     var session: HKWorkoutSession?
     var builder: HKLiveWorkoutBuilder?
     var timer: Timer?
 
-    @Published var running: Bool = false
-    @Published var heartRate: Double = 0
-    @Published var activeEnergy: Double = 0
-    @Published var elapsedTimeString: String = "00:00"
+    var running: Bool = false
+    var heartRate: Double = 0
+    var activeEnergy: Double = 0
+    var elapsedTimeString: String = "00:00"
 
     let logger = Logger(subsystem: "com.antigravity.IronFive", category: "WorkoutManager")
 

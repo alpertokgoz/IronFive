@@ -3,13 +3,26 @@ import SwiftData
 
 @main
 struct IronFiveApp: App {
-    @StateObject private var workoutManager = WorkoutManager()
+    @State private var workoutManager = WorkoutManager()
+
+    var sharedModelContainer: ModelContainer = {
+        let schema = Schema([
+            UserProfile.self, AccessoryExercise.self, WorkoutSession.self
+        ])
+        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+
+        do {
+            return try ModelContainer(for: schema, migrationPlan: IronFiveMigrationPlan.self, configurations: [modelConfiguration])
+        } catch {
+            fatalError("Could not create ModelContainer: \(error)")
+        }
+    }()
 
     var body: some Scene {
         WindowGroup {
             DashboardView()
-                .environmentObject(workoutManager)
-                .modelContainer(for: [UserProfile.self, AccessoryExercise.self, WorkoutSession.self])
+                .environment(workoutManager)
         }
+        .modelContainer(sharedModelContainer)
     }
 }

@@ -8,7 +8,7 @@ struct WorkoutActiveView: View {
     let accessories: [AccessoryExercise]
 
     @Environment(\.modelContext) var modelContext
-    @EnvironmentObject var workoutManager: WorkoutManager
+    @Environment(WorkoutManager.self) var workoutManager
     @Environment(\.dismiss) var dismiss
     @Query(sort: \WorkoutSession.date, order: .reverse) var workoutSessions: [WorkoutSession]
 
@@ -19,6 +19,7 @@ struct WorkoutActiveView: View {
     @State var showRestTimer = false
     @State var restTimeRemaining = 90
     @State var timer: Timer?
+    @State var lastTimerTick: Date = Date()
 
     // Plate Calculator State
     @State var selectedWeightForCalc: Double?
@@ -119,5 +120,5 @@ struct WorkoutActiveView: View {
 
 #Preview {
     WorkoutActiveView(lift: .squat, profile: UserProfile(), accessories: [])
-        .environmentObject(WorkoutManager())
+        .environment(WorkoutManager())
 }

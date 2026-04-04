@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct WorkoutSummaryView: View {
-    @ObservedObject var workoutManager: WorkoutManager
+    let workoutManager: WorkoutManager
     let profile: UserProfile
     let totalWeight: Double
     let showCelebration: Bool

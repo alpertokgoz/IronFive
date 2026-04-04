@@ -11,7 +11,7 @@ struct WorkoutStepView: View {
     var onRestStart: () -> Void
     var onPlateCalc: (Double) -> Void
 
-    @EnvironmentObject var workoutManager: WorkoutManager
+    @Environment(WorkoutManager.self) var workoutManager
 
     var body: some View {
         VStack(spacing: 2) {

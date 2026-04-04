@@ -99,6 +99,7 @@ extension WorkoutActiveView {
     func startRestTimer() {
         showRestTimer = true
         restTimeRemaining = 90
+        lastTimerTick = Date()
         WKInterfaceDevice.current().play(.start)
 
         let content = UNMutableNotificationContent()
@@ -111,13 +112,20 @@ extension WorkoutActiveView {
         UNUserNotificationCenter.current().add(request)
 
         timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            if restTimeRemaining > 0 {
-                restTimeRemaining -= 1
-                if restTimeRemaining <= 3 {
+        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+            let now = Date()
+            let diff = Int(round(now.timeIntervalSince(lastTimerTick)))
+
+            if diff > 0 {
+                restTimeRemaining -= diff
+                lastTimerTick = now
+
+                if restTimeRemaining > 0 && restTimeRemaining <= 3 {
                     WKInterfaceDevice.current().play(.directionUp)
                 }
-            } else {
+            }
+
+            if restTimeRemaining <= 0 {
                 showRestTimer = false
                 timer?.invalidate()
                 WKInterfaceDevice.current().play(.success)
