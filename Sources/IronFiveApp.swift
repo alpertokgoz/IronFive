@@ -7,7 +7,10 @@ struct IronFiveApp: App {
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            UserProfile.self, AccessoryExercise.self, WorkoutSession.self
+            UserProfile.self,
+            AccessoryExercise.self,
+            WorkoutSession.self,
+            ActiveWorkoutSession.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 

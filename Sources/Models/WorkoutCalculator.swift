@@ -1,8 +1,8 @@
 import Foundation
 import SwiftData
 
-struct WorkoutSet: Identifiable, Hashable {
-    let id = UUID()
+struct WorkoutSet: Identifiable, Hashable, Codable {
+    let id: UUID
     let weight: Double
     let reps: String
     let type: SetType
@@ -10,7 +10,7 @@ struct WorkoutSet: Identifiable, Hashable {
     var isCompleted: Bool = false
     var exerciseName: String // e.g. "Squat", "Leg Press"
 
-    enum SetType {
+    enum SetType: String, Codable {
         case warmup
         case main
         case supplemental // FSL
@@ -18,6 +18,7 @@ struct WorkoutSet: Identifiable, Hashable {
     }
 
     init(weight: Double, reps: String, type: SetType, exerciseName: String, actualReps: Int = 0, isCompleted: Bool = false) {
+        self.id = UUID()
         self.weight = weight
         self.reps = reps
         self.type = type

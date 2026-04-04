@@ -245,3 +245,26 @@ final class WorkoutSession {
         return amrapWeight * (1.0 + (Double(amrapReps) * 0.0333))
     }
 }
+
+@Model
+final class ActiveWorkoutSession {
+    var id: UUID = UUID()
+    var startTime: Date = Date()
+    var mainLiftValue: Int = 0
+    var currentStepIndex: Int = 0
+    var stepsData: Data = Data() // JSON encoded [WorkoutStep]
+
+    var mainLift: MainLift {
+        get { MainLift(rawValue: mainLiftValue) ?? .squat }
+        set { mainLiftValue = newValue.rawValue }
+    }
+
+    init(mainLift: MainLift, steps: [WorkoutStep], currentStepIndex: Int = 0) {
+        self.mainLiftValue = mainLift.rawValue
+        self.currentStepIndex = currentStepIndex
+        self.startTime = Date()
+        if let data = try? JSONEncoder().encode(steps) {
+            self.stepsData = data
+        }
+    }
+}
