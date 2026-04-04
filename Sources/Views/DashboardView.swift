@@ -7,16 +7,28 @@ struct DashboardView: View {
     @Query(sort: \WorkoutSession.date, order: .reverse) private var workoutSessions: [WorkoutSession]
     @Environment(\.modelContext) private var modelContext
     @Environment(WorkoutManager.self) var workoutManager
+    @State private var sessionService: WorkoutSessionService?
     @State private var showOnboarding = false
     @State private var showLiftPicker = false
     @State private var overrideLift: MainLift?
     @State private var showSkipDeloadConfirmation = false
 
+    private var workoutSessionService: WorkoutSessionService {
+        if let service = sessionService {
+            return service
+        }
+        let service = WorkoutSessionService(modelContext: modelContext)
+        DispatchQueue.main.async {
+            sessionService = service
+        }
+        return service
+    }
+
     var body: some View {
         NavigationView {
             Group {
                 if let profile = userProfiles.first {
-                    let nextLift = overrideLift ?? determineNextLift()
+                    let nextLift = overrideLift ?? workoutSessionService.determineNextLift(profile: profile, sessions: workoutSessions)
                     TabView {
                         // MARK: Page 1 — Action
                         actionPage(profile: profile, nextLift: nextLift)
@@ -60,7 +72,7 @@ struct DashboardView: View {
             Button("Cancel", role: .cancel) { }
             Button("Skip & Progress") {
                 if let profile = userProfiles.first {
-                    advanceCycle(profile: profile)
+                    workoutSessionService.advanceCycle(profile: profile)
                 }
             }
         } message: {
@@ -122,38 +134,6 @@ struct DashboardView: View {
         }
         .padding(.horizontal, 10)
         .padding(.top, 6)
-    }
-
-    // MARK: - Logic
-
-    private func advanceCycle(profile: UserProfile) {
-        profile.currentCycle += 1
-        profile.currentWeek = 1
-        let increment = profile.weightUnit == .lbs ? 5.0 : 2.5
-        profile.squatTM += increment * 2
-        profile.benchTM += increment
-        profile.deadliftTM += increment * 2
-        profile.ohpTM += increment
-        try? modelContext.save()
-    }
-
-    private func determineNextLift() -> MainLift {
-        if let profile = userProfiles.first {
-            for lift in MainLift.allCases where !isLiftCompletedThisWeek(lift, week: profile.currentWeek, cycle: profile.currentCycle, sessions: workoutSessions) {
-                return lift
-            }
-        }
-        guard let lastSession = workoutSessions.first else { return .squat }
-        switch lastSession.mainLift {
-        case .squat: return .bench
-        case .bench: return .deadlift
-        case .deadlift: return .ohp
-        case .ohp: return .squat
-        }
-    }
-
-    private func isLiftCompletedThisWeek(_ lift: MainLift, week: Int, cycle: Int, sessions: [WorkoutSession]) -> Bool {
-        sessions.contains { $0.mainLift == lift && $0.week == week && $0.cycle == cycle && $0.isCompleted }
     }
 }
 
