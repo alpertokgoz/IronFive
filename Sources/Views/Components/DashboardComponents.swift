@@ -19,18 +19,18 @@ struct DashboardHeader: View {
             HStack(spacing: 6) {
                 NavigationLink(destination: HistoryView()) {
                     Image(systemName: "chart.xyaxis.line")
-                        .font(.system(size: 10))
-                        .padding(6)
-                        .background(Color.white.opacity(0.1))
+                        .font(.system(size: 12, weight: .semibold))
+                        .padding(7)
+                        .background(Color.white.opacity(0.12))
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
 
                 NavigationLink(destination: SettingsView()) {
                     Image(systemName: "gearshape.fill")
-                        .font(.system(size: 10))
-                        .padding(6)
-                        .background(Color.white.opacity(0.1))
+                        .font(.system(size: 12, weight: .semibold))
+                        .padding(7)
+                        .background(Color.white.opacity(0.12))
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
@@ -53,27 +53,34 @@ struct DashboardHeader: View {
 struct WeeklyProgressDots: View {
     let profile: UserProfile
     let workoutSessions: [WorkoutSession]
+    var activeLift: MainLift?
 
     var body: some View {
         HStack(spacing: 4) {
             ForEach(MainLift.allCases, id: \.self) { lift in
                 let completed = isLiftCompletedThisWeek(lift, week: profile.currentWeek, cycle: profile.currentCycle)
+                let isActive = lift == activeLift
                 HStack(spacing: 2) {
                     if completed {
                         Image(systemName: "checkmark")
-                            .font(.system(size: 6, weight: .black))
+                            .font(.system(size: 7, weight: .black))
                     }
                     Text(lift.shortName)
-                        .font(.system(size: 8, weight: .black, design: .rounded))
+                        .font(.system(size: 10, weight: .black, design: .rounded))
                 }
                 .foregroundColor(completed ? .white : lift.color)
                 .padding(.horizontal, 6)
-                .padding(.vertical, 3)
+                .padding(.vertical, 4)
                 .background(
                     Capsule()
-                        .fill(completed ? lift.color : lift.color.opacity(0.1))
-                        .overlay(Capsule().stroke(lift.color, lineWidth: completed ? 0 : 1.5))
+                        .fill(completed ? lift.color : lift.color.opacity(isActive ? 0.2 : 0.1))
+                        .overlay(
+                            Capsule()
+                                .stroke(lift.color, lineWidth: completed ? 0 : isActive ? 2.0 : 1.0)
+                        )
                 )
+                .scaleEffect(isActive && !completed ? 1.1 : 1.0)
+                .animation(.easeInOut(duration: 0.3), value: isActive)
             }
         }
     }
@@ -89,44 +96,54 @@ struct MainGlanceableCard: View {
     @Binding var showSkipDeloadConfirmation: Bool
     let accessories: [AccessoryExercise]
 
+    private var accentColor: Color {
+        profile.currentWeek == 4 ? .teal : nextLift.color
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill((profile.currentWeek == 4 ? Color.teal : nextLift.color).opacity(0.1))
-                VStack(spacing: 2) {
-                    if profile.currentWeek == 4 {
-                        Text("DELOAD")
-                            .font(.system(size: 8, weight: .black, design: .rounded))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Color.teal.opacity(0.3)))
-                            .foregroundColor(.teal)
-                    }
-                    Image(systemName: nextLift.symbolName)
-                        .font(.system(size: 30, weight: .black))
-                        .foregroundStyle((profile.currentWeek == 4 ? Color.teal : nextLift.color).gradient)
-                    Text(nextLift.name.uppercased())
-                        .font(.system(size: 16, weight: .black, design: .rounded))
-                    Text("TM: \(String(format: "%.1f", getTM(for: nextLift, profile: profile))) \(profile.weightUnit.label)")
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
-                        .foregroundColor(.secondary)
-                }
-            }
-            .frame(height: 80)
-
+            // Unified hero card: icon + name + TM + CTA in one rounded element
             NavigationLink(destination: WorkoutActiveView(lift: nextLift, profile: profile, accessories: accessories)) {
-                HStack {
-                    Text("START WORKOUT")
-                        .font(.system(size: 13, weight: .black, design: .rounded))
-                    Spacer()
-                    Image(systemName: "play.fill")
-                        .font(.system(size: 10))
+                VStack(spacing: 0) {
+                    // Upper section — lift identity
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 18)
+                            .fill(accentColor.opacity(0.1))
+                        VStack(spacing: 2) {
+                            if profile.currentWeek == 4 {
+                                Text("DELOAD")
+                                    .font(.system(size: 8, weight: .black, design: .rounded))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Capsule().fill(Color.teal.opacity(0.3)))
+                                    .foregroundColor(.teal)
+                            }
+                            Image(systemName: nextLift.symbolName)
+                                .font(.system(size: 30, weight: .black))
+                                .foregroundStyle(accentColor.gradient)
+                            Text(nextLift.name.uppercased())
+                                .font(.system(size: 16, weight: .black, design: .rounded))
+                            Text("TM: \(String(format: "%.1f", getTM(for: nextLift, profile: profile))) \(profile.weightUnit.label)")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .frame(height: 80)
+
+                    // Lower section — CTA button
+                    HStack {
+                        Text("START WORKOUT")
+                            .font(.system(size: 13, weight: .black, design: .rounded))
+                        Spacer()
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 10))
+                    }
+                    .padding(.horizontal, 12)
+                    .frame(height: 38)
+                    .background(accentColor.gradient)
+                    .shadow(color: accentColor.opacity(0.4), radius: 6, y: 2)
                 }
-                .padding(.horizontal, 12)
-                .frame(height: 36)
-                .background(nextLift.color.gradient)
-                .cornerRadius(10, corners: [.bottomLeft, .bottomRight])
+                .clipShape(RoundedRectangle(cornerRadius: 18))
             }
             .buttonStyle(.plain)
 
@@ -166,7 +183,7 @@ struct WorkoutPreviewCard: View {
     let accessories: [AccessoryExercise]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             PreviewRow(icon: "flame.fill", label: "WARMUP", detail: "3 sets", color: .orange)
             PreviewRow(icon: "bolt.fill", label: "MAIN", detail: "3 sets (AMRAP)", color: .yellow)
             PreviewRow(icon: "repeat", label: profile.selectedTemplate.shortName, detail: supplementalDetail(profile), color: nextLift.color)
@@ -175,8 +192,8 @@ struct WorkoutPreviewCard: View {
                 PreviewRow(icon: "dumbbell.fill", label: "ACCESSORIES", detail: "\(accCount) exercises", color: .secondary)
             }
         }
-        .padding(8)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.05)))
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.06)))
         .padding(.top, 4)
     }
 
@@ -197,42 +214,84 @@ struct QuickStatsView: View {
     let workoutSessions: [WorkoutSession]
     @Binding var showLiftPicker: Bool
 
+    private var liftSessions: [WorkoutSession] {
+        workoutSessions.filter { $0.mainLift == nextLift && $0.isCompleted }
+    }
+
     var body: some View {
-        HStack(spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                let bestE1RM = workoutSessions.filter { $0.mainLift == nextLift && $0.isCompleted }.map { $0.estimated1RM }.max() ?? 0
+        VStack(spacing: 6) {
+            // Stats row
+            HStack(spacing: 0) {
+                let bestE1RM = liftSessions.map { $0.estimated1RM }.max() ?? 0
                 if bestE1RM > 0 {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("BEST E1RM")
-                            .font(.system(size: 7, weight: .black))
-                            .foregroundColor(.secondary)
-                        Text("\(String(format: "%.1f", bestE1RM))")
-                            .font(.system(size: 12, weight: .black, design: .rounded))
-                            .foregroundColor(.yellow)
-                    }
+                    StatCell(
+                        title: "BEST E1RM",
+                        value: String(format: "%.0f", bestE1RM),
+                        unit: profile.weightUnit.label,
+                        color: .yellow
+                    )
                 }
-                if let lastDate = workoutSessions.first?.date {
+
+                let totalSessions = liftSessions.count
+                StatCell(
+                    title: "SESSIONS",
+                    value: "\(totalSessions)",
+                    unit: "total",
+                    color: nextLift.color
+                )
+
+                if let lastDate = liftSessions.first?.date {
                     let days = Calendar.current.dateComponents([.day], from: lastDate, to: Date()).day ?? 0
-                    Text(days == 0 ? "TRAINED TODAY" : days == 1 ? "1 DAY AGO" : "\(days) DAYS AGO")
-                        .font(.system(size: 7, weight: .bold))
-                        .foregroundColor(days > 3 ? .orange : .secondary)
+                    StatCell(
+                        title: "LAST",
+                        value: days == 0 ? "Today" : "\(days)d",
+                        unit: days == 0 ? "" : "ago",
+                        color: days > 3 ? .orange : .secondary
+                    )
                 }
             }
-            .padding(.horizontal, 4)
-            Spacer()
+            .padding(8)
+            .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.05)))
+
+            // Change button
             Button(action: { showLiftPicker = true }) {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.triangle.2.circlepath")
-                    Text("CHANGE")
+                    Text("CHANGE LIFT")
                 }
                 .font(.system(size: 10, weight: .bold))
-                .padding(.horizontal, 8)
+                .foregroundColor(.white.opacity(0.7))
+                .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
-                .background(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
+                .background(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
             }
             .buttonStyle(.plain)
         }
-        .padding(.bottom, 24)
+        .padding(.top, 2)
+    }
+}
+
+struct StatCell: View {
+    let title: String
+    let value: String
+    let unit: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 1) {
+            Text(title)
+                .font(.system(size: 7, weight: .black))
+                .foregroundColor(.secondary)
+            Text(value)
+                .font(.system(size: 13, weight: .black, design: .rounded))
+                .foregroundColor(color)
+            if !unit.isEmpty {
+                Text(unit)
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -262,18 +321,18 @@ struct PreviewRow: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 8))
+                .font(.system(size: 10))
                 .foregroundColor(color)
-                .frame(width: 12)
+                .frame(width: 14)
 
             Text(label)
-                .font(.system(size: 8, weight: .black, design: .rounded))
+                .font(.system(size: 10, weight: .black, design: .rounded))
                 .foregroundColor(.secondary)
 
             Spacer()
 
             Text(detail)
-                .font(.system(size: 9, weight: .bold, design: .rounded))
+                .font(.system(size: 11, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
         }
     }

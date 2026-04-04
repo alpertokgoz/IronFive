@@ -18,9 +18,11 @@ struct OnboardingView: View {
         TabView(selection: $currentStep) {
 
             // Step 1: Welcome + Unit Selection
-            VStack(spacing: 16) {
+            VStack(spacing: 14) {
+                OnboardingStepDots(total: 4, current: 0)
+
                 Image(systemName: "figure.strengthtraining.traditional")
-                    .font(.system(size: 40))
+                    .font(.system(size: 36))
                     .foregroundStyle(.orange.gradient)
 
                 Text("IronFive")
@@ -47,6 +49,9 @@ struct OnboardingView: View {
             // Step 2: Enter 1RMs
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
+                    OnboardingStepDots(total: 4, current: 1)
+                        .frame(maxWidth: .infinity, alignment: .center)
+
                     Text("Your 1 Rep Maxes")
                         .font(.system(.headline, design: .rounded, weight: .black))
 
@@ -70,6 +75,9 @@ struct OnboardingView: View {
 
             // Step 3: TM%
             VStack(alignment: .leading, spacing: 12) {
+                OnboardingStepDots(total: 4, current: 2)
+                    .frame(maxWidth: .infinity, alignment: .center)
+
                 Text("Training Max %")
                     .font(.system(.headline, design: .rounded, weight: .black))
 
@@ -103,7 +111,10 @@ struct OnboardingView: View {
             .tag(2)
 
             // Step 4: Template Selection
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 10) {
+                OnboardingStepDots(total: 4, current: 3)
+                    .frame(maxWidth: .infinity, alignment: .center)
+
                 Text("Select Template")
                     .font(.system(.headline, design: .rounded, weight: .black))
 
@@ -116,7 +127,7 @@ struct OnboardingView: View {
                                         Text(template.name)
                                             .font(.system(.caption, design: .rounded, weight: .bold))
                                         Text(templateDescription(template))
-                                            .font(.system(size: 8))
+                                            .font(.system(size: 10))
                                             .foregroundColor(.secondary)
                                     }
                                     Spacer()
@@ -125,9 +136,13 @@ struct OnboardingView: View {
                                             .foregroundColor(.green)
                                     }
                                 }
-                                .padding()
-                                .background(Color.white.opacity(0.1))
+                                .padding(8)
+                                .background(Color.white.opacity(selectedTemplate == template ? 0.12 : 0.07))
                                 .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(selectedTemplate == template ? Color.green.opacity(0.5) : Color.clear, lineWidth: 1.5)
+                                )
                             }
                             .buttonStyle(.plain)
                         }
@@ -225,6 +240,22 @@ struct OnboardingLiftRow: View {
                 .focusable()
                 .focused($isFocused)
                 .digitalCrownRotation($value, from: 0, through: 600, by: unit.roundTo, sensitivity: .medium, isContinuous: false, isHapticFeedbackEnabled: true)
+        }
+    }
+}
+
+struct OnboardingStepDots: View {
+    let total: Int
+    let current: Int
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<total, id: \.self) { index in
+                Capsule()
+                    .fill(index == current ? Color.orange : Color.white.opacity(0.15))
+                    .frame(width: index == current ? 12 : 6, height: 4)
+                    .animation(.spring(), value: current)
+            }
         }
     }
 }

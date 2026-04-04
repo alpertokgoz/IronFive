@@ -8,6 +8,11 @@ struct AccessorySettingsView: View {
 
     @State private var showingAddSheet = false
     @State private var editingAccessory: AccessoryExercise?
+    @State private var showClearConfirmation = false
+
+    private var weightUnit: WeightUnit {
+        userProfiles.first?.weightUnit ?? .lbs
+    }
 
     var body: some View {
         List {
@@ -45,7 +50,7 @@ struct AccessorySettingsView: View {
                                 HStack {
                                     VStack(alignment: .leading) {
                                         Text(accessory.name).fontWeight(.bold)
-                                        Text("\(accessory.targetSets) Sets x \(accessory.targetReps) @ \(String(format: "%.1f", accessory.weight)) kg")
+                                        Text("\(accessory.targetSets) Sets × \(accessory.targetReps) @ \(String(format: "%.1f", accessory.weight)) \(weightUnit.label)")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                     }
@@ -75,7 +80,7 @@ struct AccessorySettingsView: View {
 
                 if !accessories.isEmpty {
                     Button(role: .destructive, action: {
-                        for acc in accessories { modelContext.delete(acc) }
+                        showClearConfirmation = true
                     }) {
                         Text("Clear All")
                     }
@@ -100,6 +105,15 @@ struct AccessorySettingsView: View {
         }
         .sheet(item: $editingAccessory) { accessory in
             AddAccessoryView(editingAccessory: accessory)
+        }
+        .confirmationDialog("Clear all accessories?", isPresented: $showClearConfirmation, titleVisibility: .visible) {
+            Button("Clear All", role: .destructive) {
+                for acc in accessories { modelContext.delete(acc) }
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This cannot be undone.")
         }
     }
 

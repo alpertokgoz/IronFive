@@ -75,7 +75,7 @@ struct DashboardView: View {
         VStack(spacing: 3) {
             DashboardHeader(profile: profile)
 
-            WeeklyProgressDots(profile: profile, workoutSessions: workoutSessions)
+            WeeklyProgressDots(profile: profile, workoutSessions: workoutSessions, activeLift: nextLift)
                 .padding(.vertical, 1)
 
             MainGlanceableCard(
@@ -121,7 +121,7 @@ struct DashboardView: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 10)
-        .padding(.top, 8)
+        .padding(.top, 6)
     }
 
     // MARK: - Logic

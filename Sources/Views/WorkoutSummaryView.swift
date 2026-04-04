@@ -35,22 +35,22 @@ struct WorkoutSummaryView: View {
 
     @ViewBuilder
     private func celebrationHeader() -> some View {
-        VStack(spacing: 0) {
+        VStack(spacing: -1) {
             Text(showCelebration ? "🏆" : "💪")
-                .font(.system(size: 28))
+                .font(.system(size: 22))
                 .scaleEffect(animateEmoji ? 1.0 : 0.3)
                 .opacity(animateEmoji ? 1.0 : 0.0)
 
             Text(showCelebration ? "NEW PR!" : "GREAT WORK!")
-                .font(.system(size: 13, weight: .black, design: .rounded))
+                .font(.system(size: 11, weight: .black, design: .rounded))
                 .foregroundStyle(
                     showCelebration
                         ? AnyShapeStyle(.yellow.gradient)
                         : AnyShapeStyle(.white)
                 )
         }
-        .padding(.top, 2)
-        .padding(.bottom, 4)
+        .padding(.bottom, 2)
+        .padding(.top, 4) // Add a little top padding so it doesn't hit the status bar
     }
 
     // MARK: - Duration Hero
@@ -59,18 +59,18 @@ struct WorkoutSummaryView: View {
     private func durationHero() -> some View {
         VStack(spacing: -2) {
             Text(workoutManager.elapsedTimeString)
-                .font(.system(size: 28, weight: .black, design: .rounded))
+                .font(.system(size: 24, weight: .black, design: .rounded))
                 .monospacedDigit()
             Text("DURATION")
                 .font(.system(size: 8, weight: .black, design: .rounded))
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
         .background(Color.white.opacity(0.06))
         .cornerRadius(12)
         .padding(.horizontal, 4)
-        .padding(.bottom, 4)
+        .padding(.bottom, 2)
     }
 
     // MARK: - Stats Row
@@ -101,13 +101,13 @@ struct WorkoutSummaryView: View {
     private func finishButton() -> some View {
         Button(action: onFinish) {
             Label("FINISH", systemImage: "checkmark")
-                .font(.system(size: 14, weight: .black, design: .rounded))
-                .frame(maxWidth: .infinity, minHeight: 32)
+                .font(.system(size: 13, weight: .black, design: .rounded))
+                .frame(maxWidth: .infinity, minHeight: 28)
         }
         .buttonStyle(.borderedProminent)
         .tint(.green)
         .padding(.horizontal, 4)
-        .padding(.bottom, 2)
+        .padding(.bottom, 0)
     }
 }
 
@@ -121,18 +121,18 @@ struct CompactStatBox: View {
         HStack(spacing: 3) {
             Image(systemName: icon)
                 .foregroundColor(color)
-                .font(.system(size: 11))
+                .font(.system(size: 10))
             VStack(alignment: .leading, spacing: -1) {
                 Text(value)
-                    .font(.system(size: 14, weight: .black, design: .rounded))
+                    .font(.system(size: 12, weight: .black, design: .rounded))
                 Text(label)
                     .font(.system(size: 7, weight: .black))
                     .foregroundColor(.secondary)
             }
             Spacer()
         }
-        .padding(.vertical, 4)
-        .padding(.horizontal, 10)
+        .padding(.vertical, 2)
+        .padding(.horizontal, 8)
         .frame(maxWidth: .infinity)
         .background(Color.white.opacity(0.08))
         .cornerRadius(10)

@@ -21,10 +21,10 @@ struct HistoryView: View {
     private var chartData: [ChartPoint] {
         var points: [ChartPoint] = []
         for lift in MainLift.allCases {
-            // Only chart week 3 (which represents the 1's week / peak of the cycle)
-            let liftSessions = sessions.filter { $0.mainLift == lift && $0.amrapReps > 0 && $0.week == 3 }
-                .sorted { $0.date < $1.date } // Oldest to newest for the chart
-                .suffix(10) // Show up to the 10 most recent sessions per lift to avoid overcrowding
+            let liftSessions = sessions
+                .filter { $0.mainLift == lift && $0.amrapReps > 0 }
+                .sorted { $0.date < $1.date }
+                .suffix(10)
             for session in liftSessions {
                 points.append(ChartPoint(date: session.date, value: session.estimated1RM, lift: lift))
             }
@@ -55,10 +55,10 @@ struct HistoryView: View {
                     } else {
                         HStack(spacing: 12) {
                             ForEach(MainLift.allCases, id: \.self) { lift in
-                                HStack(spacing: 2) {
-                                    Circle().fill(lift.color).frame(width: 6, height: 6)
+                                HStack(spacing: 3) {
+                                    Circle().fill(lift.color).frame(width: 7, height: 7)
                                     Text(lift.shortName)
-                                        .font(.system(size: 8, weight: .bold, design: .rounded))
+                                        .font(.system(size: 10, weight: .bold, design: .rounded))
                                         .foregroundColor(.secondary)
                                 }
                             }

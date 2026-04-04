@@ -81,7 +81,7 @@ struct WorkoutActiveView: View {
         }
         .overlay {
             if showRestTimer {
-                RestTimerView(timeRemaining: $restTimeRemaining, isPresented: $showRestTimer) {
+                RestTimerView(timeRemaining: $restTimeRemaining, isPresented: $showRestTimer, liftColor: lift.color) {
                     advanceTab()
                 }
             }

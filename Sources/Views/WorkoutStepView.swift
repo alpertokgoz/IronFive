@@ -22,8 +22,8 @@ struct WorkoutStepView: View {
                     let currentIdx = currentPhaseSteps.firstIndex(where: { $0.id == step.id }) ?? 0
 
                     Text("\(currentIdx + 1)/\(currentPhaseSteps.count)")
-                        .font(.system(size: 8, weight: .black, design: .rounded))
-                        .foregroundColor(.white.opacity(0.5))
+                        .font(.system(size: 10, weight: .black, design: .rounded))
+                        .foregroundColor(.white.opacity(0.6))
 
                     HStack(spacing: 3) {
                         ForEach(0..<currentPhaseSteps.count, id: \.self) { i in
@@ -33,7 +33,7 @@ struct WorkoutStepView: View {
 
                             Capsule()
                                 .fill(isCurrent ? .white : (isCompleted ? .green : .white.opacity(0.15)))
-                                .frame(width: isCurrent ? 10 : 5, height: 2.5)
+                                .frame(width: isCurrent ? 12 : 6, height: 3)
                                 .animation(.spring(), value: isCurrent)
                         }
                     }
@@ -42,8 +42,8 @@ struct WorkoutStepView: View {
                 Spacer()
 
                 Image(systemName: "chevron.right.2")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundColor(.white.opacity(0.3))
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.white.opacity(0.4))
             }
             .padding(.horizontal, 8)
             .padding(.top, 4)
@@ -57,12 +57,12 @@ struct WorkoutStepView: View {
                         Image(systemName: "clock.arrow.circlepath")
                         Text("LAST: \(last.reps) × \(Int(last.weight))\(weightUnit.label)")
                     }
-                    .font(.system(size: 8, weight: .black, design: .rounded))
+                    .font(.system(size: 10, weight: .black, design: .rounded))
                     .foregroundColor(.orange)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
                     .background(Color.orange.opacity(0.15))
-                    .cornerRadius(4)
+                    .cornerRadius(6)
                     .padding(.bottom, 2)
                 }
             }
@@ -71,6 +71,7 @@ struct WorkoutStepView: View {
                 workoutSet: $step.workoutSet,
                 isAMRAP: step.isAMRAP,
                 lift: lift,
+                weightUnit: weightUnit,
                 prGoal: nil, // We show last performance above instead
                 onComplete: onRestStart,
                 onPlateCalc: { onPlateCalc(step.workoutSet.weight) }

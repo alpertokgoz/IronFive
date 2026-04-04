@@ -26,7 +26,7 @@ struct CycleSummaryView: View {
                     .font(.system(size: 7, weight: .bold, design: .rounded))
                     .foregroundColor(.accentColor)
 
-                Text("AUTO-REGULATION")
+                Text("CYCLE PROGRESSION")
                     .font(.system(size: 13, weight: .black, design: .rounded))
             }
             .padding(.top, 2)

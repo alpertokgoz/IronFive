@@ -25,8 +25,8 @@ struct PlateCalculatorView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Text("Plate Math")
-                .font(.headline)
+            Text("PLATE MATH")
+                .font(.system(.headline, design: .rounded, weight: .black))
                 .padding(.top)
 
             VStack(spacing: 2) {
@@ -54,7 +54,7 @@ struct PlateCalculatorView: View {
                                     .frame(width: 20, height: 20)
                                     .overlay(
                                         Text(plate.weight == 1.25 ? "1.2" : "\(Int(plate.weight))")
-                                            .font(.system(size: 6, weight: .black))
+                                            .font(.system(size: 9, weight: .black))
                                     )
 
                                 Text("\(String(format: "%.1f", plate.weight)) \(unit.label)")
@@ -75,11 +75,12 @@ struct PlateCalculatorView: View {
                 }
             }
 
-            Button("Close") {
+            Button("CLOSE") {
                 dismiss()
             }
-            .buttonStyle(.bordered)
-            .tint(.secondary)
+            .font(.system(size: 14, weight: .black, design: .rounded))
+            .buttonStyle(.borderedProminent)
+            .tint(.orange)
             .padding(.bottom)
         }
         .padding()

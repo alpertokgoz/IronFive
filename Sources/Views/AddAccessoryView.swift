@@ -4,8 +4,13 @@ import SwiftData
 struct AddAccessoryView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) var dismiss
+    @Query private var userProfiles: [UserProfile]
 
     var editingAccessory: AccessoryExercise?
+
+    private var weightUnit: WeightUnit {
+        userProfiles.first?.weightUnit ?? .lbs
+    }
 
     @State private var name: String = ""
     @State private var targetSets: Int = 3
@@ -76,7 +81,7 @@ struct AddAccessoryView: View {
                             HStack(spacing: 2) {
                                 Text("\(String(format: "%.1f", weight))")
                                     .font(.system(size: 20, weight: .black, design: .rounded))
-                                Text("kg")
+                                Text(weightUnit.label)
                                     .font(.system(size: 10, weight: .bold))
                                     .foregroundColor(.secondary)
                             }

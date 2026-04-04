@@ -4,6 +4,7 @@ struct SetRowView: View {
     @Binding var workoutSet: WorkoutSet
     let isAMRAP: Bool
     let lift: MainLift
+    let weightUnit: WeightUnit
     let prGoal: Int?
     var onComplete: () -> Void
     var onPlateCalc: () -> Void
@@ -21,7 +22,7 @@ struct SetRowView: View {
                         if workoutSet.weight > 0 {
                             Text("\(String(format: "%.1f", workoutSet.weight))")
                                 .font(.system(size: 26, weight: .black, design: .rounded))
-                            Text("kg")
+                            Text(weightUnit.label)
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundColor(.secondary)
                         } else {
@@ -98,26 +99,24 @@ struct SetRowView: View {
         .padding(.vertical, 2)
         .padding(.horizontal, 8)
         .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(lift.color.opacity(0.1))
-
-                if isAMRAP && !workoutSet.isCompleted {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.orange.opacity(0.3), lineWidth: 2)
-                }
-            }
+            RoundedRectangle(cornerRadius: 12)
+                .fill(lift.color.opacity(0.1))
         )
         .overlay(alignment: .trailing) {
             if !workoutSet.isCompleted {
                 Text("TAP")
-                    .font(.system(size: 6, weight: .black))
-                    .foregroundColor(.white.opacity(0.3))
+                    .font(.system(size: 8, weight: .black))
+                    .foregroundColor(.white.opacity(0.35))
                     .padding(.trailing, 18)
             }
         }
         .sheet(isPresented: $showAmrapSheet) {
-            AmrapInputView(reps: $workoutSet.actualReps) {
+            AmrapInputView(
+                reps: $workoutSet.actualReps,
+                liftName: lift.name,
+                weight: workoutSet.weight,
+                weightUnit: weightUnit
+            ) {
                 showAmrapSheet = false
                 if workoutSet.actualReps == 0 {
                     workoutSet.actualReps = Int(workoutSet.reps.replacingOccurrences(of: "+", with: "")) ?? 0
