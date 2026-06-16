@@ -3,7 +3,7 @@ import SwiftData
 
 struct WorkoutSet: Identifiable, Hashable, Codable {
     let id: UUID
-    let weight: Double
+    var weight: Double
     let reps: String
     let type: SetType
     var actualReps: Int // Logged reps for AMRAP
@@ -187,5 +187,23 @@ struct WorkoutCalculator {
             // Suggest staying flat if performance was lower than expected
             return 0
         }
+    }
+
+    // Plate math calculations shared across views
+    static func platesNeeded(for targetWeight: Double, unit: WeightUnit) -> [(weight: Double, count: Int)] {
+        var remaining = (targetWeight - unit.barWeight) / 2.0
+        let availablePlates: [Double] = unit == .lbs
+            ? [45.0, 25.0, 10.0, 5.0, 2.5]
+            : [25.0, 20.0, 15.0, 10.0, 5.0, 2.5, 1.25]
+        var result: [(Double, Int)] = []
+
+        for plate in availablePlates {
+            let count = Int(remaining / plate)
+            if count > 0 {
+                result.append((plate, count))
+                remaining -= Double(count) * plate
+            }
+        }
+        return result
     }
 }

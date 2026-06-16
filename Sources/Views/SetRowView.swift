@@ -76,6 +76,10 @@ struct SetRowView: View {
                     .font(.system(size: 14, weight: .black, design: .rounded))
                 }
 
+                if !workoutSet.isCompleted && workoutSet.weight > weightUnit.barWeight {
+                    CompactPlateStackView(targetWeight: workoutSet.weight, unit: weightUnit)
+                        .padding(.top, 4)
+                }
             }
 
             Spacer()
@@ -102,7 +106,7 @@ struct SetRowView: View {
                     }
 
                     if showParticles {
-                        ParticleBurstView()
+                        ParticleBurstView(accentColor: lift.color)
                     }
                 }
                 .frame(width: 36, height: 36)
