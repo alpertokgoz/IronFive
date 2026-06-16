@@ -12,6 +12,8 @@ struct SettingsView: View {
     @State private var selectedTemplate: SupplementalTemplate = .fsl
     @State private var selectedUnit: WeightUnit = .lbs
     @State private var usesFourWeekCycle: Bool = false
+    @State private var isAutopilotEnabled: Bool = false
+    @State private var age: Double = 30
     @State private var editingLift: MainLift?
 
     var body: some View {
@@ -45,6 +47,21 @@ struct SettingsView: View {
                 }
 
                 Toggle("4-Week Cycle", isOn: $usesFourWeekCycle)
+
+                Toggle("Autopilot", isOn: $isAutopilotEnabled)
+                Text("Auto-start rest timer after set")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(.secondary)
+
+                Stepper(value: $age, in: 10...100, step: 1) {
+                    HStack {
+                        Text("Age")
+                        Spacer()
+                        Text("\(Int(age))")
+                            .font(.system(.body, design: .rounded, weight: .bold))
+                            .foregroundColor(.orange)
+                    }
+                }
 
                 HStack {
                     Image(systemName: "info.circle")
@@ -103,6 +120,8 @@ struct SettingsView: View {
         selectedTemplate = profile.selectedTemplate
         selectedUnit = profile.weightUnit
         usesFourWeekCycle = profile.usesFourWeekCycle
+        isAutopilotEnabled = profile.isAutopilotEnabled
+        age = Double(profile.age)
     }
 
     private func saveProfile() {
@@ -114,12 +133,9 @@ struct SettingsView: View {
             profile.selectedTemplate = selectedTemplate
             profile.weightUnit = selectedUnit
             profile.usesFourWeekCycle = usesFourWeekCycle
-        }
-
-        do {
-            try modelContext.save()
-        } catch {
-            print("Failed to save settings: \(error.localizedDescription)")
+            profile.isAutopilotEnabled = isAutopilotEnabled
+            profile.age = Int(age)
+            try? modelContext.save()
         }
     }
 }

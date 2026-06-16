@@ -13,32 +13,36 @@ struct OnboardingView: View {
     @State private var tmPercentage: Double = 90
     @State private var currentStep = 0
     @State private var selectedTemplate: SupplementalTemplate = .fsl
+    @State private var age: Double = 30
 
     var body: some View {
         TabView(selection: $currentStep) {
 
             // Step 1: Welcome + Unit Selection
-            VStack(spacing: 14) {
+            VStack(spacing: 8) {
                 OnboardingStepDots(total: 4, current: 0)
 
                 Image(systemName: "figure.strengthtraining.traditional")
-                    .font(.system(size: 36))
+                    .font(.system(size: 28))
                     .foregroundStyle(.orange.gradient)
 
                 Text("IronFive")
-                    .font(.system(.title2, design: .rounded, weight: .black))
+                    .font(.system(.title3, design: .rounded, weight: .black))
 
                 Picker("Unit", selection: $selectedUnit) {
                     Text("lbs").tag(WeightUnit.lbs)
                     Text("kg").tag(WeightUnit.kg)
                 }
-                .pickerStyle(.navigationLink)
-                .padding(.horizontal, 16)
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 12)
+
+                OnboardingAgeRow(value: $age)
+                    .padding(.horizontal, 12)
 
                 Button(action: { withAnimation { currentStep = 1 } }) {
                     Text("Next")
                         .font(.system(.body, design: .rounded, weight: .bold))
-                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .frame(maxWidth: .infinity, minHeight: 36)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.orange)
@@ -198,7 +202,8 @@ struct OnboardingView: View {
             deadliftTM: (deadlift1RM * pct / r).rounded() * r,
             ohpTM: (ohp1RM * pct / r).rounded() * r,
             selectedTemplate: selectedTemplate,
-            weightUnit: selectedUnit
+            weightUnit: selectedUnit,
+            age: Int(age)
         )
         modelContext.insert(profile)
 
@@ -256,6 +261,30 @@ struct OnboardingStepDots: View {
                     .frame(width: index == current ? 12 : 6, height: 4)
                     .animation(.spring(), value: current)
             }
+        }
+    }
+}
+
+struct OnboardingAgeRow: View {
+    @Binding var value: Double
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        HStack {
+            Text("Age")
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundColor(.secondary)
+            Spacer()
+            Text("\(Int(value))")
+                .font(.system(size: 16, weight: .black, design: .rounded))
+                .foregroundColor(isFocused ? .black : .orange)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(isFocused ? Color.orange : Color.white.opacity(0.1))
+                .clipShape(Capsule())
+                .focusable()
+                .focused($isFocused)
+                .digitalCrownRotation($value, from: 10, through: 100, by: 1, sensitivity: .medium, isContinuous: false, isHapticFeedbackEnabled: true)
         }
     }
 }

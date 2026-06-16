@@ -14,6 +14,8 @@ final class UserProfile {
     var selectedTemplateValue: Int = 0 // Raw value for SupplementalTemplate
     var weightUnitValue: Int = 0 // Raw value for WeightUnit
     var usesFourWeekCycle: Bool = false
+    var isAutopilotEnabled: Bool = false
+    var age: Int = 30
 
     var selectedTemplate: SupplementalTemplate {
         get { SupplementalTemplate(rawValue: selectedTemplateValue) ?? .fsl }
@@ -25,7 +27,7 @@ final class UserProfile {
         set { weightUnitValue = newValue.rawValue }
     }
 
-    init(squatTM: Double = 0, benchTM: Double = 0, deadliftTM: Double = 0, ohpTM: Double = 0, currentCycle: Int = 1, currentWeek: Int = 1, selectedTemplate: SupplementalTemplate = .fsl, weightUnit: WeightUnit = .lbs) {
+    init(squatTM: Double = 0, benchTM: Double = 0, deadliftTM: Double = 0, ohpTM: Double = 0, currentCycle: Int = 1, currentWeek: Int = 1, selectedTemplate: SupplementalTemplate = .fsl, weightUnit: WeightUnit = .lbs, usesFourWeekCycle: Bool = false, isAutopilotEnabled: Bool = false, age: Int = 30) {
         self.squatTM = squatTM
         self.benchTM = benchTM
         self.deadliftTM = deadliftTM
@@ -35,6 +37,8 @@ final class UserProfile {
         self.selectedTemplateValue = selectedTemplate.rawValue
         self.weightUnitValue = weightUnit.rawValue
         self.usesFourWeekCycle = usesFourWeekCycle
+        self.isAutopilotEnabled = isAutopilotEnabled
+        self.age = age
     }
 }
 

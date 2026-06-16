@@ -31,6 +31,10 @@ struct WorkoutActiveView: View {
     @State var finalAmrapReps = 0
     @State var finalAmrapWeight = 0.0
 
+    // Phase Transition State
+    @State var showPhaseTransition = false
+    @State var currentPhaseTitle = ""
+
     @Environment(\.isLuminanceReduced) var isLuminanceReduced
 
     var body: some View {
@@ -45,10 +49,15 @@ struct WorkoutActiveView: View {
             if selectedTab < steps.count && !isLuminanceReduced {
                 // Real-time Stats Footer - Hidden on Summary Tab to avoid redundancy
                 HStack {
-                    HStack(spacing: 2) {
-                        Image(systemName: "heart.fill")
-                            .foregroundColor(.red)
-                            .font(.system(size: 10))
+                    HStack(spacing: 4) {
+                        ZStack {
+                            Circle()
+                                .stroke(heartRateColor(for: workoutManager.heartRate), lineWidth: 1.2)
+                                .frame(width: 14, height: 14)
+                            Image(systemName: "heart.fill")
+                                .foregroundColor(heartRateColor(for: workoutManager.heartRate))
+                                .font(.system(size: 7))
+                        }
                         Text(workoutManager.heartRate > 0 ? "\(Int(workoutManager.heartRate))" : "—")
                             .font(.system(size: 12, weight: .bold, design: .rounded))
                         Text("BPM")
@@ -88,6 +97,28 @@ struct WorkoutActiveView: View {
                     advanceTab()
                 }
             }
+            if showPhaseTransition {
+                ZStack {
+                    Color.black.opacity(0.85).ignoresSafeArea()
+                    VStack {
+                        Text("UP NEXT")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.secondary)
+                        Text(currentPhaseTitle.uppercased())
+                            .font(.system(size: 24, weight: .black, design: .rounded))
+                            .foregroundColor(lift.color)
+                    }
+                }
+                .transition(.opacity)
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(action: { showFinishConfirmation = true }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.white.opacity(0.6))
+                }
+            }
         }
         .sheet(item: Binding(
             get: { selectedWeightForCalc.map { WeightIdentifiable(weight: $0) } },
@@ -116,6 +147,24 @@ struct WorkoutActiveView: View {
             }
         } message: {
             Text("Your session will be saved.")
+        }
+    }
+
+    private func heartRateColor(for rate: Double) -> Color {
+        guard rate > 0 else { return .secondary }
+        let maxHR = Double(220 - profile.age)
+        let percent = rate / maxHR
+
+        if percent < 0.60 {
+            return .blue
+        } else if percent < 0.70 {
+            return .green
+        } else if percent < 0.80 {
+            return .yellow
+        } else if percent < 0.90 {
+            return .orange
+        } else {
+            return .red
         }
     }
 }
