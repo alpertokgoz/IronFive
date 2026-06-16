@@ -5,7 +5,7 @@ enum SchemaV1: VersionedSchema {
     static var versionIdentifier = Schema.Version(1, 0, 0)
 
     static var models: [any PersistentModel.Type] {
-        [UserProfile.self, AccessoryExercise.self, WorkoutSession.self]
+        [UserProfile.self, AccessoryExercise.self, WorkoutSession.self, ActiveWorkoutSession.self]
     }
 }
 
