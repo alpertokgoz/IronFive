@@ -132,7 +132,20 @@ extension WorkoutActiveView {
 
     func startRestTimer() {
         showRestTimer = true
-        restTimeRemaining = 90
+        var duration = 90
+        if steps.indices.contains(selectedTab) {
+            let stepTitle = steps[selectedTab].title
+            if stepTitle == "Warmup" {
+                duration = 60
+            } else if stepTitle == "Main" {
+                duration = 180
+            } else if stepTitle == profile.selectedTemplate.shortName {
+                duration = 90
+            } else {
+                duration = 60
+            }
+        }
+        restTimeRemaining = duration
         lastTimerTick = Date()
         WKInterfaceDevice.current().play(.start)
 
@@ -141,7 +154,7 @@ extension WorkoutActiveView {
         content.body = "Back to the bar!"
         content.sound = .default
 
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 90, repeats: false)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(duration), repeats: false)
         let request = UNNotificationRequest(identifier: "restTimer", content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request)
 
@@ -178,6 +191,11 @@ extension WorkoutActiveView {
                 let nextStep = steps[nextIndex]
                 if nextStep.title != currentStep.title {
                     WKInterfaceDevice.current().play(.success)
+                    currentPhaseTitle = nextStep.title
+                    withAnimation { showPhaseTransition = true }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        withAnimation { showPhaseTransition = false }
+                    }
                 } else {
                     WKInterfaceDevice.current().play(.directionUp)
                 }
@@ -193,12 +211,25 @@ extension WorkoutActiveView {
     }
 
     func triggerCelebration() {
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
-            showCelebration = true
-        }
-        WKInterfaceDevice.current().play(.notification)
+        let amrapStep = steps.last { $0.title == "Main" && $0.workoutSet.reps.contains("+") && $0.workoutSet.isCompleted }
+        let actualReps = amrapStep?.workoutSet.actualReps ?? 0
+        let weight = amrapStep?.workoutSet.weight ?? 0
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+        let newE1RM = weight * (1 + 0.0333 * Double(actualReps))
+        let liftSessions = workoutSessions.filter { $0.mainLift == lift && $0.isCompleted }
+        let allTimeBest = liftSessions.map { $0.estimated1RM }.max() ?? 0
+
+        let isPR = newE1RM > allTimeBest && actualReps > 0
+
+        if isPR {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
+                showCelebration = true
+            }
+            WKInterfaceDevice.current().play(.notification)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                finishWorkout()
+            }
+        } else {
             finishWorkout()
         }
     }
@@ -264,6 +295,7 @@ extension WorkoutActiveView {
                     nextTab: index + 1,
                     workoutSessions: workoutSessions,
                     weightUnit: profile.weightUnit,
+                    isAutopilotEnabled: profile.isAutopilotEnabled,
                     onRestStart: startRestTimer,
                     onPlateCalc: { weight in selectedWeightForCalc = weight },
                     onSave: { saveActiveSession() }

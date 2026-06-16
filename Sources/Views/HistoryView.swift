@@ -47,7 +47,7 @@ struct HistoryView: View {
             Section {
                 VStack(alignment: .leading, spacing: 12) {
                     if chartData.isEmpty {
-                        Text("No 1's Week AMRAP data recorded yet")
+                        Text("No AMRAP data recorded yet")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                             .frame(maxWidth: .infinity, alignment: .center)
@@ -111,7 +111,7 @@ struct HistoryView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .listRowBackground(Color.clear)
             } else {
-                ForEach(sessions.prefix(4)) { session in
+                ForEach(sessions) { session in
                     Section {
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(alignment: .top) {

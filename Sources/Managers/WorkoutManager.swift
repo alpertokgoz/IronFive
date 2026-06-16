@@ -20,10 +20,11 @@ class WorkoutManager: NSObject {
 
     func requestAuthorization() {
         let typesToShare: Set = [HKQuantityType.workoutType()]
-        let typesToRead: Set = [
-            HKQuantityType.quantityType(forIdentifier: .heartRate)!,
-            HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!
+        let optionalTypes = [
+            HKQuantityType.quantityType(forIdentifier: .heartRate),
+            HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)
         ]
+        let typesToRead = Set(optionalTypes.compactMap { $0 })
 
         healthStore.requestAuthorization(toShare: typesToShare, read: typesToRead) { success, error in
             if success {
@@ -90,7 +91,12 @@ class WorkoutManager: NSObject {
 
 // MARK: - HKWorkoutSessionDelegate
 extension WorkoutManager: HKWorkoutSessionDelegate {
-    func workoutSession(_ workoutSession: HKWorkoutSession, didChangeTo toState: HKWorkoutSessionState, from fromState: HKWorkoutSessionState, date: Date) {
+    func workoutSession(
+        _ workoutSession: HKWorkoutSession,
+        didChangeTo toState: HKWorkoutSessionState,
+        from fromState: HKWorkoutSessionState,
+        date: Date
+    ) {
         // Handle state changes if necessary
         DispatchQueue.main.async {
             self.running = (toState == .running)
@@ -105,12 +111,14 @@ extension WorkoutManager: HKWorkoutSessionDelegate {
 // MARK: - HKLiveWorkoutBuilderDelegate
 extension WorkoutManager: HKLiveWorkoutBuilderDelegate {
     func workoutBuilder(_ workoutBuilder: HKLiveWorkoutBuilder, didCollectDataOf collectedTypes: Set<HKSampleType>) {
-        if collectedTypes.contains(HKQuantityType.quantityType(forIdentifier: .heartRate)!) {
+        if let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate),
+           collectedTypes.contains(heartRateType) {
             DispatchQueue.main.async {
                 self.updateHeartRate()
             }
         }
-        if collectedTypes.contains(HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!) {
+        if let energyType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned),
+           collectedTypes.contains(energyType) {
             DispatchQueue.main.async {
                 self.updateActiveEnergy()
             }

@@ -6,6 +6,7 @@ struct CycleSummaryView: View {
     @Environment(\.dismiss) var dismiss
 
     @Query private var accessories: [AccessoryExercise]
+    @Query(sort: \WorkoutSession.date, order: .reverse) private var workoutSessions: [WorkoutSession]
 
     let profile: UserProfile
     let lastLift: MainLift
@@ -127,10 +128,28 @@ struct CycleSummaryView: View {
 
     private func calculateSuggestions() {
         let unit = profile.weightUnit
-        suggestedSquat = profile.squatTM + WorkoutCalculator.calculateSuggestedIncrease(lift: .squat, currentTM: profile.squatTM, amrapWeight: amrapWeight, amrapReps: amrapReps, unit: unit)
-        suggestedBench = profile.benchTM + WorkoutCalculator.calculateSuggestedIncrease(lift: .bench, currentTM: profile.benchTM, amrapWeight: amrapWeight, amrapReps: amrapReps, unit: unit)
-        suggestedDeadlift = profile.deadliftTM + WorkoutCalculator.calculateSuggestedIncrease(lift: .deadlift, currentTM: profile.deadliftTM, amrapWeight: amrapWeight, amrapReps: amrapReps, unit: unit)
-        suggestedOHP = profile.ohpTM + WorkoutCalculator.calculateSuggestedIncrease(lift: .ohp, currentTM: profile.ohpTM, amrapWeight: amrapWeight, amrapReps: amrapReps, unit: unit)
+
+        func getAmrap(for lift: MainLift) -> (weight: Double, reps: Int) {
+            if lift == lastLift {
+                return (amrapWeight, amrapReps)
+            }
+            if let session = workoutSessions.first(where: { $0.mainLift == lift && $0.amrapReps > 0 }) {
+                return (session.amrapWeight, session.amrapReps)
+            }
+            return (0, 0)
+        }
+
+        let squatAmrap = getAmrap(for: .squat)
+        suggestedSquat = profile.squatTM + WorkoutCalculator.calculateSuggestedIncrease(lift: .squat, currentTM: profile.squatTM, amrapWeight: squatAmrap.weight, amrapReps: squatAmrap.reps, unit: unit)
+
+        let benchAmrap = getAmrap(for: .bench)
+        suggestedBench = profile.benchTM + WorkoutCalculator.calculateSuggestedIncrease(lift: .bench, currentTM: profile.benchTM, amrapWeight: benchAmrap.weight, amrapReps: benchAmrap.reps, unit: unit)
+
+        let deadliftAmrap = getAmrap(for: .deadlift)
+        suggestedDeadlift = profile.deadliftTM + WorkoutCalculator.calculateSuggestedIncrease(lift: .deadlift, currentTM: profile.deadliftTM, amrapWeight: deadliftAmrap.weight, amrapReps: deadliftAmrap.reps, unit: unit)
+
+        let ohpAmrap = getAmrap(for: .ohp)
+        suggestedOHP = profile.ohpTM + WorkoutCalculator.calculateSuggestedIncrease(lift: .ohp, currentTM: profile.ohpTM, amrapWeight: ohpAmrap.weight, amrapReps: ohpAmrap.reps, unit: unit)
     }
 
     private func saveAndAdvance() {

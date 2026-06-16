@@ -94,6 +94,8 @@ struct MainGlanceableCard: View {
     let nextLift: MainLift
     let profile: UserProfile
     @Binding var showSkipDeloadConfirmation: Bool
+    @State private var showStartWorkoutConfirmation = false
+    @State private var navigateToWorkout = false
     let accessories: [AccessoryExercise]
 
     private var accentColor: Color {
@@ -103,7 +105,7 @@ struct MainGlanceableCard: View {
     var body: some View {
         VStack(spacing: 0) {
             // Unified hero card: icon + name + TM + CTA in one rounded element
-            NavigationLink(destination: WorkoutActiveView(lift: nextLift, profile: profile, accessories: accessories)) {
+            Button(action: { showStartWorkoutConfirmation = true }) {
                 VStack(spacing: 0) {
                     // Upper section — lift identity
                     ZStack {
@@ -146,6 +148,15 @@ struct MainGlanceableCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: 18))
             }
             .buttonStyle(.plain)
+            .background(
+                NavigationLink(destination: WorkoutActiveView(lift: nextLift, profile: profile, accessories: accessories), isActive: $navigateToWorkout) { EmptyView() }
+            )
+            .alert("Start Workout?", isPresented: $showStartWorkoutConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Let's Go") { navigateToWorkout = true }
+            } message: {
+                Text("Ready to crush it?")
+            }
 
             if profile.currentWeek == 4 {
                 Button(action: { showSkipDeloadConfirmation = true }) {
@@ -335,21 +346,5 @@ struct PreviewRow: View {
                 .font(.system(size: 11, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
         }
-    }
-}
-
-extension View {
-    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
-        clipShape(RoundedCorner(radius: radius, corners: corners))
-    }
-}
-
-struct RoundedCorner: Shape {
-    var radius: CGFloat = .infinity
-    var corners: UIRectCorner = .allCorners
-
-    func path(in rect: CGRect) -> Path {
-        let path = UIBezierPath(roundedRect: rect, byRoundingCorners: corners, cornerRadii: CGSize(width: radius, height: radius))
-        return Path(path.cgPath)
     }
 }

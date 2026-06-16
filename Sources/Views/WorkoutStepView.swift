@@ -8,6 +8,7 @@ struct WorkoutStepView: View {
     let nextTab: Int
     let workoutSessions: [WorkoutSession]
     let weightUnit: WeightUnit
+    var isAutopilotEnabled: Bool = false
     var onRestStart: () -> Void
     var onPlateCalc: (Double) -> Void
     var onSave: () -> Void
@@ -17,7 +18,12 @@ struct WorkoutStepView: View {
 
     var body: some View {
         VStack(spacing: 2) {
-            // ... (rest of VStack)
+            if step.isAMRAP, let lastPerformance = getLastAmrapPerformance() {
+                Text("LAST: \(lastPerformance.reps) × \(Int(lastPerformance.weight)) \(weightUnit.label)")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundColor(.secondary)
+                    .padding(.bottom, 2)
+            }
             SetRowView(
                 workoutSet: $step.workoutSet,
                 isAMRAP: step.isAMRAP,
@@ -36,6 +42,9 @@ struct WorkoutStepView: View {
                 .opacity(isLuminanceReduced ? 0.6 : 1.0)
                 .onChange(of: step.workoutSet.isCompleted) { _, _ in
                     onSave()
+                    if step.workoutSet.isCompleted && isAutopilotEnabled {
+                        onRestStart()
+                    }
                 }
                 .onChange(of: step.workoutSet.actualReps) { _, _ in
                     onSave()
@@ -52,6 +61,10 @@ struct WorkoutStepView: View {
                     if value.translation.width < -50 {
                         WKInterfaceDevice.current().play(.directionUp)
                         withAnimation { selectedTab = nextTab }
+                        onSave()
+                    } else if value.translation.width > 50 && selectedTab > 0 {
+                        WKInterfaceDevice.current().play(.directionDown)
+                        withAnimation { selectedTab -= 1 }
                         onSave()
                     }
                 }

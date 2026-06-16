@@ -41,6 +41,7 @@ struct AmrapInputView: View {
             }
 
             Button("Done") {
+                WKInterfaceDevice.current().play(.success)
                 onDone()
             }
             .buttonStyle(.borderedProminent)

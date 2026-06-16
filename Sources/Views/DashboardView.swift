@@ -17,11 +17,7 @@ struct DashboardView: View {
         if let service = sessionService {
             return service
         }
-        let service = WorkoutSessionService(modelContext: modelContext)
-        DispatchQueue.main.async {
-            sessionService = service
-        }
-        return service
+        return WorkoutSessionService(modelContext: modelContext)
     }
 
     var body: some View {
@@ -57,6 +53,9 @@ struct DashboardView: View {
             Button("Cancel", role: .cancel) {}
         }
         .onAppear {
+            if sessionService == nil {
+                sessionService = WorkoutSessionService(modelContext: modelContext)
+            }
             workoutManager.requestAuthorization()
             if userProfiles.isEmpty {
                 showOnboarding = true

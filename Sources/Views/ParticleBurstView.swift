@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ParticleBurstView: View {
+    var accentColor: Color = .green
     @State private var particles: [Particle] = []
 
     struct Particle: Identifiable {
@@ -38,7 +39,7 @@ struct ParticleBurstView: View {
                         opacity: 1,
                         speedX: cos(angle) * speed,
                         speedY: sin(angle) * speed,
-                        color: [.green, .mint, .white].randomElement()!
+                        color: [accentColor, accentColor.opacity(0.6), .white].randomElement() ?? .white
                     ))
                 }
 
