@@ -1,4 +1,5 @@
 import SwiftUI
+import WatchKit
 
 struct SetRowView: View {
     @Binding var workoutSet: WorkoutSet
@@ -6,176 +7,109 @@ struct SetRowView: View {
     let lift: MainLift
     let weightUnit: WeightUnit
     let prGoal: Int?
+    var compact = false
     var onComplete: () -> Void
     var onPlateCalc: () -> Void
+    var onRest: () -> Void
+    var onNext: () -> Void
 
-    @FocusState private var isRepFieldFocused: Bool
-    @State private var scale: CGFloat = 1.0
-    @FocusState private var isWeightFocused: Bool
-    @State private var crownWeight: Double = 0
-    @State private var showParticles = false
     @State private var showAmrapSheet = false
+    @State private var showWeightEditor = false
+    @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
     var body: some View {
-        HStack(spacing: 8) {
-            VStack(alignment: .leading, spacing: 0) {
-                Button(action: {
-                    isWeightFocused = true
-                    onPlateCalc()
-                }) {
-                    HStack(alignment: .firstTextBaseline, spacing: 2) {
-                        if workoutSet.weight > 0 {
-                            Text("\(String(format: "%.1f", workoutSet.weight))")
-                                .font(.system(size: 26, weight: .black, design: .rounded))
-                            Text(weightUnit.label)
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.secondary)
-                        } else {
-                            Text("BW")
-                                .font(.system(size: 26, weight: .black, design: .rounded))
-                                .foregroundColor(.secondary)
+        VStack(spacing: compact ? 4 : 7) {
+            Button { showWeightEditor = true } label: {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(workoutSet.weight == 0 ? (workoutSet.type == .accessory ? "—" : "BW") : IronTheme.weight(workoutSet.weight))
+                            .font(.system(size: compact ? 36 : 46, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                        HStack(spacing: 4) {
+                            Text(workoutSet.weight == 0 ? (workoutSet.type == .accessory ? "No added weight" : "Bodyweight") : weightUnit.label)
+                            Image(systemName: "pencil").font(.system(size: 8))
                         }
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.secondary)
                     }
-                    .foregroundStyle(workoutSet.isCompleted ? .secondary : (isWeightFocused ? .accentColor : .primary))
-                }
-                .buttonStyle(.plain)
-                .disabled(workoutSet.weight == 0)
-                .focusable()
-                .focused($isWeightFocused)
-                .digitalCrownRotation($crownWeight, from: 0, through: 1000, by: weightUnit.roundTo, sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
-                .onChange(of: crownWeight) { _, newValue in
-                    workoutSet.weight = newValue
-                }
-                .onAppear {
-                    crownWeight = workoutSet.weight
-                }
-
-                if isAMRAP {
-                    VStack(alignment: .leading, spacing: 1) {
-                        HStack(alignment: .firstTextBaseline, spacing: 2) {
-                            Text(workoutSet.reps)
-                                .foregroundColor(.orange)
-                            Text("REPS")
-                                .foregroundColor(.secondary)
-                        }
-                        .font(.system(size: 14, weight: .black, design: .rounded))
-
-                        if workoutSet.isCompleted {
-                            Text("DONE: \(workoutSet.actualReps)")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                } else {
-                    HStack(alignment: .firstTextBaseline, spacing: 2) {
-                        Text("\(workoutSet.reps)")
-                            .foregroundColor(.orange)
-                        Text("REPS")
-                            .foregroundColor(.secondary)
-                    }
-                    .font(.system(size: 14, weight: .black, design: .rounded))
-                }
-
-                if !workoutSet.isCompleted && workoutSet.weight > weightUnit.barWeight {
-                    CompactPlateStackView(targetWeight: workoutSet.weight, unit: weightUnit)
-                        .padding(.top, 4)
-                }
-            }
-
-            Spacer()
-
-            Button(action: {
-                handleCompletion()
-            }) {
-                ZStack {
-                    Circle()
-                        .stroke(Color.white.opacity(0.15), lineWidth: 4)
-                        .background(Circle().fill(Color.white.opacity(0.05)))
-
-                    Circle()
-                        .fill(isAMRAP ? Color.orange : Color.green)
-                        .scaleEffect(workoutSet.isCompleted ? 1.0 : 0.001)
-                        .opacity(workoutSet.isCompleted ? 1.0 : 0.0)
-                        .animation(.spring(response: 0.4, dampingFraction: 0.6), value: workoutSet.isCompleted)
-
-                    if workoutSet.isCompleted {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 22, weight: .black))
-                            .foregroundColor(.black)
-                            .transition(.scale.combined(with: .opacity))
-                    }
-
-                    if showParticles {
-                        ParticleBurstView(accentColor: lift.color)
+                    Spacer(minLength: 0)
+                    VStack(alignment: .trailing, spacing: 0) {
+                        Text(workoutSet.isCompleted ? "\(workoutSet.completedReps)" : workoutSet.reps)
+                            .font(.system(size: compact ? 26 : 32, weight: .semibold, design: .rounded))
+                            .foregroundStyle(workoutSet.isCompleted ? IronTheme.mint : lift.color)
+                        IronEyebrow(text: "Reps")
                     }
                 }
-                .frame(width: 36, height: 36)
-                .scaleEffect(scale)
+                .frame(maxWidth: .infinity)
             }
             .buttonStyle(.plain)
-        }
-        .padding(.vertical, 2)
-        .padding(.horizontal, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(lift.color.opacity(0.1))
-        )
-        .overlay(alignment: .trailing) {
-            if !workoutSet.isCompleted {
-                Text("TAP")
-                    .font(.system(size: 8, weight: .black))
-                    .foregroundColor(.white.opacity(0.35))
-                    .padding(.trailing, 18)
+            .accessibilityLabel("Weight, \(IronTheme.weight(workoutSet.weight)) \(weightUnit.label). Tap to edit.")
+
+            if !workoutSet.isCompleted && workoutSet.type != .accessory && workoutSet.weight > weightUnit.barWeight {
+                HStack(spacing: 5) {
+                    CompactPlateStackView(targetWeight: workoutSet.weight, unit: weightUnit)
+                    Spacer(minLength: 0)
+                    Text("/ side").font(.system(size: 9)).foregroundStyle(.secondary)
+                }
+                .frame(height: 18)
+                .accessibilityElement(children: .combine)
+            }
+
+            if !isLuminanceReduced {
+                if workoutSet.isCompleted {
+                    HStack(spacing: 6) {
+                        Button(action: onRest) { Label("Rest", systemImage: "timer") }
+                            .buttonStyle(IronButtonStyle(secondary: true))
+                        Button(action: onNext) { Label("Next", systemImage: "arrow.right") }
+                            .buttonStyle(IronButtonStyle(accent: lift.color))
+                    }
+                } else {
+                    Button(action: handleCompletion) {
+                        Label(isAMRAP ? "Log your reps" : "Log set", systemImage: "checkmark")
+                    }
+                    .buttonStyle(IronButtonStyle(accent: lift.color))
+                }
             }
         }
+        .fixedSize(horizontal: false, vertical: true)
         .sheet(isPresented: $showAmrapSheet) {
-            AmrapInputView(
-                reps: $workoutSet.actualReps,
-                liftName: lift.name,
-                weight: workoutSet.weight,
-                weightUnit: weightUnit
-            ) {
+            AmrapInputView(reps: $workoutSet.actualReps, liftName: lift.name,
+                           weight: workoutSet.weight, weightUnit: weightUnit) {
                 showAmrapSheet = false
-                if workoutSet.actualReps == 0 {
-                    workoutSet.actualReps = Int(workoutSet.reps.replacingOccurrences(of: "+", with: "")) ?? 0
-                }
                 markCompleted()
             }
+        }
+        .sheet(isPresented: $showWeightEditor) {
+            SetWeightEditor(weight: $workoutSet.weight, unit: weightUnit, accent: lift.color,
+                            isBarbell: workoutSet.type != .accessory)
+        }
+        .accessibilityAction(named: "Undo set") {
+            if workoutSet.isCompleted { undoCompletion() }
         }
     }
 
     private func handleCompletion() {
-        if !workoutSet.isCompleted {
-            if isAMRAP {
-                showAmrapSheet = true
-            } else {
-                markCompleted()
+        if isAMRAP {
+            if workoutSet.actualReps == 0 {
+                workoutSet.actualReps = Int(workoutSet.reps.replacingOccurrences(of: "+", with: "")) ?? 1
             }
+            showAmrapSheet = true
         } else {
-            WKInterfaceDevice.current().play(.directionDown)
-            withAnimation(.spring()) {
-                workoutSet.isCompleted = false
-                showParticles = false
-            }
+            markCompleted()
         }
     }
 
     private func markCompleted() {
         WKInterfaceDevice.current().play(.directionUp)
+        workoutSet.isCompleted = true
+        onComplete()
+    }
 
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-            scale = 0.9
-            workoutSet.isCompleted = true
-            showParticles = true
-            onComplete()
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { scale = 1.0 }
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            showParticles = false
-        }
+    private func undoCompletion() {
+        workoutSet.isCompleted = false
+        WKInterfaceDevice.current().play(.directionDown)
     }
 }

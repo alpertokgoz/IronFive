@@ -1,43 +1,6 @@
 import Foundation
 import SwiftData
 
-struct WorkoutSet: Identifiable, Hashable, Codable {
-    let id: UUID
-    var weight: Double
-    let reps: String
-    let type: SetType
-    var actualReps: Int // Logged reps for AMRAP
-    var isCompleted: Bool = false
-    var exerciseName: String // e.g. "Squat", "Leg Press"
-
-    enum SetType: String, Codable {
-        case warmup
-        case main
-        case supplemental // FSL
-        case accessory
-    }
-
-    init(weight: Double, reps: String, type: SetType, exerciseName: String, actualReps: Int = 0, isCompleted: Bool = false) {
-        self.id = UUID()
-        self.weight = weight
-        self.reps = reps
-        self.type = type
-        self.exerciseName = exerciseName
-        self.actualReps = actualReps
-        self.isCompleted = isCompleted
-    }
-
-    var estimated1RM: Double {
-        guard actualReps > 0 else { return 0 }
-        return weight * (1.0 + (Double(actualReps) * 0.0333))
-    }
-
-    var completedReps: Int {
-        if actualReps > 0 { return actualReps }
-        return Int(reps.replacingOccurrences(of: "+", with: "")) ?? 0
-    }
-}
-
 struct WorkoutCalculator {
 
     static func getTM(for lift: MainLift, from profile: UserProfile) -> Double {
@@ -191,19 +154,6 @@ struct WorkoutCalculator {
 
     // Plate math calculations shared across views
     static func platesNeeded(for targetWeight: Double, unit: WeightUnit) -> [(weight: Double, count: Int)] {
-        var remaining = (targetWeight - unit.barWeight) / 2.0
-        let availablePlates: [Double] = unit == .lbs
-            ? [45.0, 25.0, 10.0, 5.0, 2.5]
-            : [25.0, 20.0, 15.0, 10.0, 5.0, 2.5, 1.25]
-        var result: [(Double, Int)] = []
-
-        for plate in availablePlates {
-            let count = Int(remaining / plate)
-            if count > 0 {
-                result.append((plate, count))
-                remaining -= Double(count) * plate
-            }
-        }
-        return result
+        PlateLoading.platesNeeded(for: targetWeight, unit: unit)
     }
 }

@@ -7,7 +7,9 @@ targets:
     platform: watchOS
     deploymentTarget: "10.0"
     sources:
-      - Sources
+      - path: Sources
+        excludes:
+          - graphify-out/**
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.antigravity.IronFive
@@ -36,3 +38,12 @@ schemes:
       config: Debug
     archive:
       config: Release
+  IronFiveDesign:
+    shared: true
+    build:
+      targets:
+        IronFive: [all]
+    run:
+      config: Debug
+      commandLineArguments:
+        --design-preview: true

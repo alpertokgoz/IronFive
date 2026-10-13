@@ -1,0 +1,14 @@
+docs/
+.gemini/
+*.xcassets/
+*.png
+*.jpg
+*.jpeg
+*.gif
+.git/
+.agents/
+*.md
+*.txt
+*.yml
+*.yaml
+*.json

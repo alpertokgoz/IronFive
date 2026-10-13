@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import UserNotifications
 import WatchKit
 
@@ -15,9 +16,15 @@ extension WorkoutActiveView {
 
     func setupWorkout() {
         if let session = fetchActiveSession(),
-           let decodedSteps = try? JSONDecoder().decode([WorkoutStep].self, from: session.stepsData) {
-            self.steps = decodedSteps
-            self.selectedTab = session.currentStepIndex
+           let progress = try? WorkoutProgress.decode(session.stepsData) {
+            self.steps = progress.steps
+            self.selectedTab = progress.restoredIndex(session.currentStepIndex)
+            self.restCountdown = progress.restCountdown
+            return
+        }
+
+        if fetchActiveSession() != nil {
+            workoutError = "Your saved workout could not be read. Its data has been preserved."
             return
         }
 
@@ -35,7 +42,8 @@ extension WorkoutActiveView {
     }
 
     func saveActiveSession() {
-        if let data = try? JSONEncoder().encode(steps) {
+        guard !steps.isEmpty, !didFinishWorkout else { return }
+        if let data = try? JSONEncoder().encode(WorkoutProgress(steps: steps, restCountdown: restCountdown)) {
             if let existing = fetchActiveSession() {
                 existing.stepsData = data
                 existing.currentStepIndex = selectedTab
@@ -43,7 +51,11 @@ extension WorkoutActiveView {
                 let newSession = ActiveWorkoutSession(mainLift: lift, steps: steps, currentStepIndex: selectedTab)
                 modelContext.insert(newSession)
             }
-            try? modelContext.save()
+            do {
+                try modelContext.save()
+            } catch {
+                workoutError = "Could not save your workout progress. Please try again."
+            }
         }
     }
 
@@ -51,13 +63,6 @@ extension WorkoutActiveView {
         let liftVal = lift.rawValue
         let descriptor = FetchDescriptor<ActiveWorkoutSession>(predicate: #Predicate { $0.mainLiftValue == liftVal })
         return try? modelContext.fetch(descriptor).first
-    }
-
-    func deleteActiveSession() {
-        if let existing = fetchActiveSession() {
-            modelContext.delete(existing)
-            try? modelContext.save()
-        }
     }
 
     private func addWarmupSteps(to steps: inout [WorkoutStep], from workoutSets: [WorkoutSet]) {
@@ -130,58 +135,6 @@ extension WorkoutActiveView {
         }
     }
 
-    func startRestTimer() {
-        showRestTimer = true
-        var duration = 90
-        if steps.indices.contains(selectedTab) {
-            let stepTitle = steps[selectedTab].title
-            if stepTitle == "Warmup" {
-                duration = 60
-            } else if stepTitle == "Main" {
-                duration = 180
-            } else if stepTitle == profile.selectedTemplate.shortName {
-                duration = 90
-            } else {
-                duration = 60
-            }
-        }
-        restTimeRemaining = duration
-        lastTimerTick = Date()
-        WKInterfaceDevice.current().play(.start)
-
-        let content = UNMutableNotificationContent()
-        content.title = "Rest Over"
-        content.body = "Back to the bar!"
-        content.sound = .default
-
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(duration), repeats: false)
-        let request = UNNotificationRequest(identifier: "restTimer", content: content, trigger: trigger)
-        UNUserNotificationCenter.current().add(request)
-
-        timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
-            let now = Date()
-            let diff = Int(round(now.timeIntervalSince(lastTimerTick)))
-
-            if diff > 0 {
-                restTimeRemaining -= diff
-                lastTimerTick = now
-
-                if restTimeRemaining > 0 && restTimeRemaining <= 3 {
-                    WKInterfaceDevice.current().play(.directionUp)
-                }
-            }
-
-            if restTimeRemaining <= 0 {
-                showRestTimer = false
-                timer?.invalidate()
-                WKInterfaceDevice.current().play(.success)
-                UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["restTimer"])
-                advanceTab()
-            }
-        }
-    }
-
     func advanceTab() {
         if selectedTab < steps.count {
             let currentStep = steps[selectedTab]
@@ -193,7 +146,7 @@ extension WorkoutActiveView {
                     WKInterfaceDevice.current().play(.success)
                     currentPhaseTitle = nextStep.title
                     withAnimation { showPhaseTransition = true }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.65) {
                         withAnimation { showPhaseTransition = false }
                     }
                 } else {
@@ -211,6 +164,11 @@ extension WorkoutActiveView {
     }
 
     func triggerCelebration() {
+        guard !didFinishWorkout else { return }
+        guard !workoutManager.isPreparing else {
+            workoutError = "Apple Health is still preparing your workout. Please try again in a moment."
+            return
+        }
         let amrapStep = steps.last { $0.title == "Main" && $0.workoutSet.reps.contains("+") && $0.workoutSet.isCompleted }
         let actualReps = amrapStep?.workoutSet.actualReps ?? 0
         let weight = amrapStep?.workoutSet.weight ?? 0
@@ -235,8 +193,11 @@ extension WorkoutActiveView {
     }
 
     func finishWorkout() {
-        workoutManager.endWorkout()
-        deleteActiveSession()
+        guard !didFinishWorkout else { return }
+        stopRestTimer()
+        if let activeSession = fetchActiveSession() {
+            modelContext.delete(activeSession)
+        }
         let maxWeek = profile.usesFourWeekCycle ? 4 : 3
 
         let amrapStep = steps.last { $0.title == "Main" && $0.workoutSet.reps.contains("+") && $0.workoutSet.isCompleted }
@@ -247,13 +208,13 @@ extension WorkoutActiveView {
             mainLift: lift,
             week: profile.currentWeek,
             cycle: profile.currentCycle,
-            isCompleted: true,
+            isCompleted: WorkoutProgress(steps: steps).isComplete,
             amrapReps: actualReps,
             amrapWeight: weight
         )
         modelContext.insert(session)
 
-        if areAllLiftsCompletedThisWeek() {
+        if session.isCompleted && areAllLiftsCompletedThisWeek() {
             if profile.currentWeek == maxWeek {
                 finalAmrapReps = actualReps
                 finalAmrapWeight = weight
@@ -263,7 +224,16 @@ extension WorkoutActiveView {
             }
         }
 
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            modelContext.rollback()
+            showCycleSummary = false
+            workoutError = "Could not save your workout. Your active session is still available. Please try again."
+            return
+        }
+        didFinishWorkout = true
+        workoutManager.endWorkout()
 
         if !showCycleSummary {
             dismiss()
@@ -285,91 +255,76 @@ extension WorkoutActiveView {
     }
 
     func contentView() -> some View {
-        TabView(selection: $selectedTab) {
-            ForEach(Array(steps.enumerated()), id: \.element.id) { index, step in
-                WorkoutStepView(
-                    lift: lift,
-                    step: $steps[index],
-                    allSteps: steps,
-                    selectedTab: $selectedTab,
-                    nextTab: index + 1,
-                    workoutSessions: workoutSessions,
-                    weightUnit: profile.weightUnit,
-                    isAutopilotEnabled: profile.isAutopilotEnabled,
-                    onRestStart: startRestTimer,
-                    onPlateCalc: { weight in selectedWeightForCalc = weight },
-                    onSave: { saveActiveSession() }
+        GeometryReader { pageGeometry in
+            TabView(selection: $selectedTab) {
+                ForEach(Array(steps.enumerated()), id: \.element.id) { index, step in
+                    VStack(spacing: 0) {
+                        headerView(for: step)
+                        WorkoutStepView(
+                            lift: lift,
+                            step: $steps[index],
+                            allSteps: steps,
+                            selectedTab: $selectedTab,
+                            nextTab: index + 1,
+                            workoutSessions: workoutSessions,
+                            weightUnit: profile.weightUnit,
+                            isAutopilotEnabled: profile.isAutopilotEnabled,
+                            onRestStart: startRestTimer,
+                            onPlateCalc: { weight in selectedWeightForCalc = weight },
+                            onSave: { saveActiveSession() }
+                        )
+                        if !isLuminanceReduced { metricsFooter() }
+                    }
+                    .frame(width: pageGeometry.size.width, height: pageGeometry.size.height)
+                    .tag(index)
+                }
+
+                WorkoutSummaryView(
+                    workoutManager: workoutManager,
+                    profile: profile,
+                    totalWeight: totalWeightLifted,
+                    showCelebration: showCelebration,
+                    completedSets: completedStepsCount(),
+                    totalSets: steps.count,
+                    personalBestReps: steps.last { $0.isAMRAP && $0.workoutSet.isCompleted }?.workoutSet.actualReps ?? 0,
+                    personalBestWeight: steps.last { $0.isAMRAP && $0.workoutSet.isCompleted }?.workoutSet.weight ?? 0,
+                    onFinish: { showFinishConfirmation = true }
                 )
-                .tag(index)
+
+                .frame(width: pageGeometry.size.width, height: pageGeometry.size.height)
+                .tag(steps.count)
             }
-
-            WorkoutSummaryView(
-                workoutManager: workoutManager,
-                profile: profile,
-                totalWeight: totalWeightLifted,
-                showCelebration: showCelebration,
-                onFinish: { showFinishConfirmation = true }
-            )
-
-            .tag(steps.count)
+            .frame(width: pageGeometry.size.width, height: pageGeometry.size.height)
+            .tabViewStyle(.page(indexDisplayMode: .never))
         }
     }
 
-    func headerView() -> some View {
-        VStack(spacing: 0) {
-            // Primary Title Row: Lift Icon + Name
-            HStack(alignment: .center, spacing: 4) {
-                if steps.indices.contains(selectedTab) {
-                    let step = steps[selectedTab]
-                    let isAccessory = !isStandardPhase(step.title)
-
-                    if let icon = step.liftIcon {
-                        Image(systemName: icon)
-                            .font(.system(size: 10, weight: .black))
-                            .foregroundStyle(lift.color.gradient)
-                    }
-
-                    Text(isAccessory ? step.title.uppercased() : lift.name.uppercased())
-                        .font(.system(size: 12, weight: .black, design: .rounded))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                } else {
-                    Text(lift.name.uppercased())
-                        .font(.system(size: 12, weight: .black, design: .rounded))
-                }
-            }
-            .padding(.top, 2)
-
-            // Secondary Stat Row: Cycle + Phase/Day + Progress Bar
-            HStack(alignment: .center, spacing: 6) {
-                let isAcc = steps.indices.contains(selectedTab) && !isStandardPhase(steps[selectedTab].title)
-                let stepTitle = steps.indices.contains(selectedTab) ? steps[selectedTab].title.uppercased() : ""
-                let subtitle = isAcc ? "C\(profile.currentCycle): \(weekAbbreviation(for: profile.currentWeek).uppercased()) - \(lift.name.uppercased()) DAY" : "C\(profile.currentCycle): \(weekAbbreviation(for: profile.currentWeek).uppercased()) - \(stepTitle)"
-
-                Text(subtitle)
-                    .font(.system(size: 7, weight: .black, design: .rounded))
-                    .foregroundColor(.accentColor)
+    func headerView(for step: WorkoutStep) -> some View {
+        VStack(spacing: 4) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(step.title == "Warmup" ? "Warm-up" : step.title)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(lift.color)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-
-                Spacer()
-
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color.white.opacity(0.15))
-                        .frame(height: 3)
-
-                    let progress = !steps.isEmpty ? Double(completedStepsCount()) / Double(steps.count) : 0
-                    Capsule()
-                        .fill(Color.green.gradient)
-                        .frame(width: max(0, 70 * progress), height: 3)
-                }
-                .frame(width: 70)
+                Spacer(minLength: 3)
+                Text("Set \(step.setNumberInPhase) of \(step.totalSetsInPhase)")
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 8)
-            .padding(.bottom, 2)
-            .background(Color.black.opacity(0.6))
+            GeometryReader { geometry in
+                Capsule().fill(lift.color.opacity(0.25))
+                    .overlay(alignment: .leading) {
+                        Capsule().fill(lift.color)
+                            .frame(width: geometry.size.width * Double(completedStepsCount()) / Double(max(1, steps.count)))
+                    }
+            }
+                .frame(height: 4)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Workout progress")
+                .accessibilityValue("\(completedStepsCount()) of \(steps.count) sets complete")
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 3)
     }
 
     private func isStandardPhase(_ title: String) -> Bool {

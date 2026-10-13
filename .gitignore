@@ -92,3 +92,4 @@ docs/
 
 .gemini/
 gha-creds-*.json
+graphify-out/

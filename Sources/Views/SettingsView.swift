@@ -4,6 +4,9 @@ import SwiftData
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var userProfiles: [UserProfile]
+    @Query private var sessions: [WorkoutSession]
+    @Query private var accessories: [AccessoryExercise]
+    @Query private var activeSessions: [ActiveWorkoutSession]
 
     @State private var squatTM: Double = 0
     @State private var benchTM: Double = 0
@@ -14,54 +17,75 @@ struct SettingsView: View {
     @State private var usesFourWeekCycle: Bool = false
     @State private var isAutopilotEnabled: Bool = false
     @State private var age: Double = 30
+    @State private var editingAge = false
     @State private var editingLift: MainLift?
+    var initialSection: String?
+    @State private var loaded = false
+    @State private var saveError: String?
+
+    private var settingsValues: [Double] {
+        [squatTM, benchTM, deadliftTM, ohpTM, age, Double(selectedTemplate.rawValue),
+         usesFourWeekCycle ? 1 : 0, isAutopilotEnabled ? 1 : 0]
+    }
 
     var body: some View {
+        ScrollViewReader { proxy in
         Form {
+            if !activeSessions.isEmpty {
+                Text("Finish your active workout before changing weights or your program.")
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+            }
             Section(header: settingsHeader("Training Maxes")) {
                 TMRow(lift: .squat, value: squatTM, unit: selectedUnit) {
-                    editingLift = .squat
+                    if activeSessions.isEmpty { editingLift = .squat }
                 }
                 TMRow(lift: .bench, value: benchTM, unit: selectedUnit) {
-                    editingLift = .bench
+                    if activeSessions.isEmpty { editingLift = .bench }
                 }
                 TMRow(lift: .deadlift, value: deadliftTM, unit: selectedUnit) {
-                    editingLift = .deadlift
+                    if activeSessions.isEmpty { editingLift = .deadlift }
                 }
                 TMRow(lift: .ohp, value: ohpTM, unit: selectedUnit) {
-                    editingLift = .ohp
+                    if activeSessions.isEmpty { editingLift = .ohp }
                 }
             }
-            .listRowBackground(Color.white.opacity(0.05))
+            .disabled(!activeSessions.isEmpty)
+            .opacity(activeSessions.isEmpty ? 1 : 0.45)
+            .listRowBackground(IronTheme.surface)
 
             Section(header: settingsHeader("Program")) {
                 Picker("Unit", selection: $selectedUnit) {
                     Text("lbs").tag(WeightUnit.lbs)
                     Text("kg").tag(WeightUnit.kg)
                 }
+                .disabled(!activeSessions.isEmpty)
+                .id("program")
 
                 Picker("Template", selection: $selectedTemplate) {
                     ForEach(SupplementalTemplate.allCases, id: \.self) { template in
                         Text(template.name).tag(template)
                     }
                 }
+                .disabled(!activeSessions.isEmpty)
 
-                Toggle("4-Week Cycle", isOn: $usesFourWeekCycle)
+                Toggle("Deload week", isOn: $usesFourWeekCycle)
+                    .disabled(!activeSessions.isEmpty)
 
-                Toggle("Autopilot", isOn: $isAutopilotEnabled)
-                Text("Auto-start rest timer after set")
-                    .font(.system(size: 8, weight: .bold))
+                Toggle("Autopilot", isOn: $isAutopilotEnabled).id("autopilot")
+                Text("Rest starts after non-AMRAP sets. When it ends, the next set appears.")
+                    .font(.system(size: 11))
                     .foregroundColor(.secondary)
 
-                Stepper(value: $age, in: 10...100, step: 1) {
+                Button { editingAge = true } label: {
                     HStack {
                         Text("Age")
                         Spacer()
-                        Text("\(Int(age))")
-                            .font(.system(.body, design: .rounded, weight: .bold))
-                            .foregroundColor(.orange)
+                        Text("\(Int(age))").foregroundStyle(IronTheme.ember)
+                        Image(systemName: "chevron.right").font(.caption2)
                     }
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
                 }
+                .buttonStyle(.plain)
 
                 HStack {
                     Image(systemName: "info.circle")
@@ -71,20 +95,31 @@ struct SettingsView: View {
                         .foregroundColor(.secondary)
                 }
             }
-            .listRowBackground(Color.white.opacity(0.05))
+            .listRowBackground(IronTheme.surface)
 
             Section {
-                NavigationLink("Manage Accessories", destination: AccessorySettingsView())
+                NavigationLink("Assistance exercises", destination: AccessorySettingsView()).id("assistance")
+                    .disabled(!activeSessions.isEmpty)
             }
-            .listRowBackground(Color.white.opacity(0.05))
+            .listRowBackground(IronTheme.surface)
         }
         .navigationTitle("Settings")
-        .containerBackground(Color.black.gradient, for: .navigation)
+        .containerBackground(IronTheme.canvas.gradient, for: .navigation)
         .onAppear {
-            loadProfile()
+            if !loaded { loadProfile(); loaded = true }
+            if let section = initialSection {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { proxy.scrollTo(section, anchor: .top) }
+            }
         }
-        .onDisappear {
-            saveProfile()
+        .onChange(of: settingsValues) { _, _ in if loaded { saveProfile() } }
+        .onChange(of: selectedUnit) { old, new in
+            if loaded { convertSavedWeights(from: old, to: new) }
+        }
+        .alert("Could not save settings", isPresented: Binding(
+            get: { saveError != nil }, set: { if !$0 { saveError = nil } }
+        )) { Button("OK") { saveError = nil } } message: { Text(saveError ?? "") }
+        .sheet(isPresented: $editingAge) {
+            CountEditor(value: $age, title: "Age", range: 10...100, saveTitle: "Save age")
         }
         .sheet(item: $editingLift) { lift in
             TMEditorSheet(
@@ -92,6 +127,7 @@ struct SettingsView: View {
                 value: bindingForLift(lift),
                 unit: selectedUnit
             )
+        }
         }
     }
 
@@ -124,6 +160,20 @@ struct SettingsView: View {
         age = Double(profile.age)
     }
 
+    private func convertSavedWeights(from old: WeightUnit, to new: WeightUnit) {
+        guard old != new, userProfiles.first?.weightUnit == old else { return }
+        let convert: (Double) -> Double = {
+            WeightConversion.convert($0, fromKilograms: old == .kg, toKilograms: new == .kg)
+        }
+        squatTM = WorkoutCalculator.calculatedWeight(convert(squatTM), roundTo: new.roundTo)
+        benchTM = WorkoutCalculator.calculatedWeight(convert(benchTM), roundTo: new.roundTo)
+        deadliftTM = WorkoutCalculator.calculatedWeight(convert(deadliftTM), roundTo: new.roundTo)
+        ohpTM = WorkoutCalculator.calculatedWeight(convert(ohpTM), roundTo: new.roundTo)
+        for session in sessions { session.amrapWeight = convert(session.amrapWeight) }
+        for accessory in accessories { accessory.weight = convert(accessory.weight) }
+        saveProfile()
+    }
+
     private func saveProfile() {
         if let profile = userProfiles.first {
             profile.squatTM = squatTM
@@ -135,7 +185,11 @@ struct SettingsView: View {
             profile.usesFourWeekCycle = usesFourWeekCycle
             profile.isAutopilotEnabled = isAutopilotEnabled
             profile.age = Int(age)
-            try? modelContext.save()
+            do { try modelContext.save() } catch {
+                modelContext.rollback()
+                saveError = "Your previous settings have been kept. Please try again."
+                loadProfile()
+            }
         }
     }
 }
@@ -162,7 +216,7 @@ struct TMRow: View {
 
                 Spacer()
 
-                Text("\(String(format: "%.1f", value)) \(unit.label)")
+                Text("\(IronTheme.weight(value)) \(unit.label)")
                     .font(.system(size: 14, weight: .black, design: .rounded))
                     .foregroundColor(lift.color)
             }
@@ -177,42 +231,10 @@ struct TMEditorSheet: View {
     let lift: MainLift
     @Binding var value: Double
     let unit: WeightUnit
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: lift.symbolName)
-                .font(.system(size: 24, weight: .bold))
-                .foregroundStyle(lift.color.gradient)
-
-            Text(lift.name.uppercased())
-                .font(.system(size: 11, weight: .black, design: .rounded))
-                .foregroundColor(.secondary)
-
-            Text("\(String(format: "%.1f", value))")
-                .font(.system(size: 36, weight: .black, design: .rounded))
-                .foregroundColor(lift.color)
-                .focusable()
-                .digitalCrownRotation(
-                    $value,
-                    from: 0,
-                    through: 500,
-                    by: unit.roundTo,
-                    sensitivity: .medium,
-                    isContinuous: false,
-                    isHapticFeedbackEnabled: true
-                )
-
-            Text(unit.label)
-                .font(.system(size: 12, weight: .bold, design: .rounded))
-                .foregroundColor(.secondary)
-
-            Button("Done") { dismiss() }
-                .buttonStyle(.borderedProminent)
-                .tint(lift.color)
-                .padding(.top, 4)
-        }
-        .containerBackground(Color.black.gradient, for: .navigation)
+        SetWeightEditor(weight: $value, unit: unit, accent: lift.color,
+                        isBarbell: false, title: "\(lift.shortName) training max", saveTitle: "Save training max")
     }
 }
 

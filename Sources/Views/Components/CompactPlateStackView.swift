@@ -4,65 +4,38 @@ struct CompactPlateStackView: View {
     let targetWeight: Double
     let unit: WeightUnit
 
+    private var plates: [(weight: Double, count: Int)] {
+        WorkoutCalculator.platesNeeded(for: targetWeight, unit: unit)
+    }
+
     var body: some View {
-        let plates = WorkoutCalculator.platesNeeded(for: targetWeight, unit: unit)
-        if plates.isEmpty {
-            EmptyView()
-        } else {
-            HStack(spacing: 2) {
-                ForEach(plates, id: \.weight) { plate in
-                    ForEach(0..<plate.count, id: \.self) { _ in
-                        Circle()
-                            .fill(plateColor(plate.weight))
-                            .frame(width: 12, height: 12)
-                            .overlay(
-                                Text(plateLabel(plate.weight))
-                                    .font(.system(size: 6, weight: .black, design: .rounded))
-                                    .foregroundColor(textColorForPlate(plate.weight))
-                            )
-                    }
-                }
+        HStack(spacing: 3) {
+            ForEach(plates, id: \.weight) { plate in
+                Text("\(IronTheme.weight(plate.weight))\(plate.count > 1 ? "×\(plate.count)" : "")")
+                    .font(.system(size: 9, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 2)
+                    .background(PlateColor.color(plate.weight, unit: unit).opacity(0.18), in: Capsule())
+                    .overlay { Capsule().strokeBorder(PlateColor.color(plate.weight, unit: unit).opacity(0.6), lineWidth: 1) }
             }
         }
+        .frame(height: 18)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(plates.isEmpty ? "No plates" : "Each side: " + plates.map { "\($0.count) plates of \(IronTheme.weight($0.weight)) \(unit.label)" }.joined(separator: ", "))
     }
+}
 
-    private func plateLabel(_ weight: Double) -> String {
-        if weight == 1.25 { return "1.2" }
-        return "\(Int(weight))"
-    }
+enum PlateColor {
+    private static let kilograms: [Double: Color] = [
+        25: .red, 20: .blue, 15: .yellow, 10: .green, 5: .white, 2.5: .orange
+    ]
+    private static let pounds: [Double: Color] = [
+        45: .blue, 25: .yellow, 10: .white, 5: .red, 2.5: .green
+    ]
 
-    private func textColorForPlate(_ weight: Double) -> Color {
-        // white plates need black text for high contrast on watchOS
-        if weight == 10 && unit == .lbs { return .black }
-        if weight == 5 && unit == .kg { return .black }
-        return .white
-    }
-
-    private func plateColor(_ weight: Double) -> Color {
-        unit == .kg ? kgPlateColor(weight) : lbsPlateColor(weight)
-    }
-
-    private func kgPlateColor(_ weight: Double) -> Color {
-        switch weight {
-        case 25: return .red
-        case 20: return .blue
-        case 15: return .yellow
-        case 10: return .green
-        case 5: return .white
-        case 2.5: return .orange
-        case 1.25: return .gray
-        default: return .gray
-        }
-    }
-
-    private func lbsPlateColor(_ weight: Double) -> Color {
-        switch weight {
-        case 45: return .blue
-        case 25: return .yellow
-        case 10: return .white
-        case 5: return .red
-        case 2.5: return .green
-        default: return .gray
-        }
+    static func color(_ weight: Double, unit: WeightUnit) -> Color {
+        (unit == .kg ? kilograms : pounds)[weight] ?? .gray
     }
 }

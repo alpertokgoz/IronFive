@@ -1,105 +1,84 @@
 import SwiftUI
-import WatchKit
 
 struct RestTimerView: View {
-    @Binding var timeRemaining: Int
-    @Binding var isPresented: Bool
-    var liftColor: Color = .orange
-    var onDismiss: () -> Void
+    let timeRemaining: Int
+    var liftColor: Color = IronTheme.ember
+    var nextSet: String = "Next set"
+    var onAdjust: (Int) -> Void
+    var onSkip: () -> Void
 
-    @Environment(\.isLuminanceReduced) var isLuminanceReduced
-    @State private var initialTime: Int = 0
+    @Environment(\.isLuminanceReduced) private var isLuminanceReduced
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var initialTime = 0
 
     private var progress: Double {
-        Double(timeRemaining) / Double(max(initialTime, 1))
+        min(1, max(0, Double(timeRemaining) / Double(max(initialTime, 1))))
     }
 
-    private var ringColor: Color {
-        if timeRemaining <= 10 { return .red }
-        if timeRemaining <= 30 { return .orange }
-        return liftColor
-    }
+    private var accent: Color { timeRemaining <= 10 ? IronTheme.mint : liftColor }
 
     var body: some View {
-        ZStack {
-            Color.black.opacity(isLuminanceReduced ? 1.0 : 0.92).ignoresSafeArea()
-
-            VStack(spacing: 10) {
-                Text("REST")
-                    .font(.system(.footnote, design: .rounded, weight: .black))
-                    .foregroundColor(liftColor)
-                    .kerning(2.0)
-
+        GeometryReader { geometry in
+            let diameter = min(112, max(46, geometry.size.height - 108))
+            VStack(spacing: 4) {
+                IronEyebrow(text: timeRemaining <= 3 ? "Get ready" : "Recover", color: accent)
                 ZStack {
+                    Circle().stroke(.white.opacity(0.09), lineWidth: isLuminanceReduced ? 2 : 6)
                     Circle()
-                        .stroke(Color.white.opacity(0.1), lineWidth: isLuminanceReduced ? 2 : 8)
-
-                    if !isLuminanceReduced {
-                        Circle()
-                            .trim(from: 0, to: progress)
-                            .stroke(ringColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                            .rotationEffect(.degrees(-90))
-                            .animation(.linear(duration: 1.0), value: timeRemaining)
-                    }
-
-                    VStack(spacing: -4) {
-                        Text("\(timeRemaining)")
-                            .font(.system(size: 44, weight: isLuminanceReduced ? .regular : .black, design: .rounded))
-                            .foregroundColor(timeRemaining <= 10 ? .red : .primary)
-                            .contentTransition(.numericText())
-                        Text("SEC")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.secondary)
-                    }
+                        .trim(from: 0, to: progress)
+                        .stroke(accent, style: StrokeStyle(lineWidth: isLuminanceReduced ? 2 : 6, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                        .animation(reduceMotion ? nil : .linear(duration: 0.5), value: timeRemaining)
+                    Text(String(format: "%d:%02d", timeRemaining / 60, timeRemaining % 60))
+                        .font(.system(size: diameter > 90 ? 34 : diameter > 60 ? 26 : 20, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.white)
+                        .contentTransition(.numericText())
+                        .accessibilityLabel("\(timeRemaining) seconds remaining")
                 }
-                .frame(width: 100, height: 100)
-                .onAppear {
-                    if initialTime == 0 { initialTime = timeRemaining }
-                }
-
+                .frame(width: diameter, height: diameter)
+                .frame(maxWidth: .infinity)
+                Spacer(minLength: 0)
                 if !isLuminanceReduced {
-                    // +30 / -30 row
-                    HStack(spacing: 8) {
-                        Button(action: {
-                            timeRemaining = max(5, timeRemaining - 30)
-                        }) {
-                            Text("-30s")
-                                .font(.system(size: 10, weight: .bold, design: .rounded))
-                                .frame(width: 46, height: 28)
-                                .background(Capsule().fill(Color.white.opacity(0.08)))
-                        }
-                        .buttonStyle(.plain)
-
-                        Button(action: {
-                            timeRemaining += 30
-                            initialTime = max(initialTime, timeRemaining)
-                        }) {
-                            Text("+30s")
-                                .font(.system(size: 10, weight: .bold, design: .rounded))
-                                .frame(width: 46, height: 28)
-                                .background(Capsule().fill(Color.white.opacity(0.08)))
-                        }
-                        .buttonStyle(.plain)
+                    HStack(spacing: 6) {
+                        adjustmentButton(-30, label: "−30s")
+                        adjustmentButton(30, label: "+30s")
                     }
-
-                    Button(action: {
-                        withAnimation {
-                            isPresented = false
-                            onDismiss()
-                        }
-                    }) {
+                    Button(action: onSkip) {
                         HStack {
-                            Image(systemName: "forward.fill")
-                            Text("SKIP")
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("Next set")
+                                Text(nextSet)
+                                    .font(.system(size: 9, weight: .medium))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                            }
+                            Spacer(minLength: 3)
+                            Image(systemName: "arrow.right")
                         }
-                        .font(.system(size: 12, weight: .black, design: .rounded))
-                        .frame(width: 90, height: 36)
-                        .background(Capsule().fill(Color.white.opacity(0.15)))
+                        .padding(.horizontal, 12)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(IronButtonStyle(accent: accent))
+                    .accessibilityLabel("Skip remaining rest. \(nextSet)")
                 }
             }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .frame(width: geometry.size.width, height: geometry.size.height)
+            .background(IronTheme.canvas.ignoresSafeArea())
         }
-        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .onAppear { initialTime = timeRemaining }
+        .onChange(of: timeRemaining) { _, value in initialTime = max(initialTime, value) }
+    }
+
+    private func adjustmentButton(_ seconds: Int, label: String) -> some View {
+        Button { onAdjust(seconds) } label: {
+            Text(label)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .frame(maxWidth: .infinity, minHeight: 32)
+                .background(IronTheme.surface, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(seconds > 0 ? "Add 30 seconds of rest" : "Remove 30 seconds of rest")
     }
 }

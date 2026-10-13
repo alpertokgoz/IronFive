@@ -42,46 +42,6 @@ final class UserProfile {
     }
 }
 
-enum WeightUnit: Int, Codable, CaseIterable {
-    case lbs = 0
-    case kg = 1
-
-    var label: String {
-        switch self {
-        case .lbs: return "lbs"
-        case .kg: return "kg"
-        }
-    }
-
-    var barWeight: Double {
-        switch self {
-        case .lbs: return 45.0
-        case .kg: return 20.0
-        }
-    }
-
-    var roundTo: Double {
-        switch self {
-        case .lbs: return 5.0
-        case .kg: return 2.5
-        }
-    }
-
-    var upperIncrement: Double {
-        switch self {
-        case .lbs: return 5.0
-        case .kg: return 2.5
-        }
-    }
-
-    var lowerIncrement: Double {
-        switch self {
-        case .lbs: return 10.0
-        case .kg: return 5.0
-        }
-    }
-}
-
 enum SupplementalTemplate: Int, Codable, CaseIterable {
     case fsl = 0
     case bbb = 1
@@ -127,10 +87,10 @@ enum MainLift: Int, Codable, CaseIterable {
 
     var color: Color {
         switch self {
-        case .squat: return .orange
-        case .bench: return .blue
-        case .deadlift: return .green
-        case .ohp: return .purple
+        case .squat: return IronTheme.ember
+        case .bench: return Color(red: 0.38, green: 0.72, blue: 1)
+        case .deadlift: return IronTheme.mint
+        case .ohp: return Color(red: 0.73, green: 0.58, blue: 1)
         }
     }
 

@@ -13,6 +13,7 @@ struct CycleSummaryView: View {
     let amrapReps: Int
     let amrapWeight: Double
     let onComplete: () -> Void
+    var initialPage = 0
 
     @State private var suggestedSquat: Double = 0
     @State private var suggestedBench: Double = 0
@@ -20,110 +21,129 @@ struct CycleSummaryView: View {
     @State private var suggestedOHP: Double = 0
     @State private var selectedTemplate: SupplementalTemplate = .fsl
 
+    @State private var page = 0
+    @State private var showTemplates = false
+    @State private var editingLift: MainLift?
+    @State private var loaded = false
+    @State private var saveError: String?
+
     var body: some View {
-        VStack(spacing: 8) {
-            VStack(spacing: 0) {
-                Text("CYCLE \(profile.currentCycle) COMPLETE")
-                    .font(.system(size: 7, weight: .bold, design: .rounded))
-                    .foregroundColor(.accentColor)
-
-                Text("CYCLE PROGRESSION")
-                    .font(.system(size: 13, weight: .black, design: .rounded))
-            }
-            .padding(.top, 2)
-
-            if amrapReps > 0 {
-                HStack(spacing: 6) {
-                    Image(systemName: lastLift.symbolName)
-                        .font(.system(size: 10))
-                        .foregroundColor(lastLift.color)
-                    Text("\(amrapReps) × \(Int(amrapWeight))\(profile.weightUnit.label)")
-                        .font(.system(size: 11, weight: .black, design: .rounded))
-                }
-                .padding(.vertical, 4)
-                .padding(.horizontal, 8)
-                .background(Color.white.opacity(0.05))
-                .cornerRadius(6)
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("SUGGESTED TMS")
-                    .font(.system(size: 7, weight: .bold))
-                    .foregroundColor(.secondary)
-
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 4) {
-                    CompactTMBox(lift: .squat, old: profile.squatTM, new: $suggestedSquat, unit: profile.weightUnit)
-                    CompactTMBox(lift: .bench, old: profile.benchTM, new: $suggestedBench, unit: profile.weightUnit)
-                    CompactTMBox(lift: .deadlift, old: profile.deadliftTM, new: $suggestedDeadlift, unit: profile.weightUnit)
-                    CompactTMBox(lift: .ohp, old: profile.ohpTM, new: $suggestedOHP, unit: profile.weightUnit)
-                }
-            }
-            .padding(.horizontal, 4)
-
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Picker("Template", selection: $selectedTemplate) {
-                        ForEach(SupplementalTemplate.allCases, id: \.self) { template in
-                            Text(template.shortName).tag(template)
+        TabView(selection: $page) {
+            GeometryReader { geometry in
+                VStack(spacing: 5) {
+                    IronEyebrow(text: "Cycle \(profile.currentCycle) complete", color: IronTheme.mint)
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 5) {
+                        ForEach(MainLift.allCases, id: \.self) { lift in
+                            Button { editingLift = lift } label: {
+                                VStack(spacing: 2) {
+                                    HStack(spacing: 3) {
+                                        Text(lift.shortName)
+                                        Image(systemName: "pencil").font(.system(size: 8))
+                                    }
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                                    Text(IronTheme.weight(suggestion(lift).wrappedValue))
+                                        .font(.system(size: 21, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(lift.color)
+                                        .lineLimit(1).minimumScaleFactor(0.7)
+                                }
+                                .frame(maxWidth: .infinity, minHeight: 43)
+                                .modifier(IronCard(accent: lift.color))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Edit \(lift.name) training max")
                         }
                     }
-                    .pickerStyle(.navigationLink)
-                    .labelsHidden()
-                    .frame(height: 32)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.1)))
-
-                    NavigationLink(destination: AccessorySettingsView()) {
-                        Image(systemName: "slider.horizontal.3")
-                            .font(.system(size: 12))
-                            .frame(width: 44, height: 32)
-                            .background(Color.white.opacity(0.1))
-                            .cornerRadius(8)
-                    }
-                    .buttonStyle(.plain)
+                    Text("Next training maxes · \(profile.weightUnit.label)")
+                        .font(.system(size: 10)).foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
+                    Button("Review program") { withAnimation { page = 1 } }
+                        .buttonStyle(IronButtonStyle())
                 }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .frame(width: geometry.size.width, height: geometry.size.height)
             }
-            .padding(.horizontal, 4)
-
-            Spacer(minLength: 0)
-
-            Button("CONFIRM & START") {
-                saveAndAdvance()
+            .onAppear(perform: loadSuggestions)
+            .tag(0)
+            VStack(spacing: 6) {
+                ScrollView {
+                    VStack(spacing: 8) {
+                        Button { showTemplates = true } label: {
+                            HStack {
+                                Text("Template")
+                                Spacer(minLength: 0)
+                                Text(selectedTemplate.shortName).foregroundStyle(IronTheme.mint)
+                                Image(systemName: "chevron.right").font(.system(size: 10))
+                            }
+                            .padding(.horizontal, 10)
+                        }
+                        .buttonStyle(IronButtonStyle(secondary: true))
+                        NavigationLink("Assistance exercises", destination: AccessorySettingsView())
+                            .buttonStyle(IronButtonStyle(secondary: true))
+                        if selectedTemplate != profile.selectedTemplate {
+                            Text("Changing template replaces assistance with its defaults.")
+                                .font(.system(size: 11)).foregroundStyle(IronTheme.ember)
+                        }
+                        if amrapReps > 0 {
+                            Text("Last set · \(amrapReps) × \(IronTheme.weight(amrapWeight)) \(profile.weightUnit.label)")
+                                .font(.system(size: 11)).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                Button("Start cycle \(profile.currentCycle + 1)", action: saveAndAdvance)
+                    .buttonStyle(IronButtonStyle())
             }
-            .font(.system(size: 13, weight: .black, design: .rounded))
-            .buttonStyle(.borderedProminent)
-            .tint(.green)
-            .frame(height: 36)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .tag(1)
         }
-        .padding(.horizontal, 8)
-        .padding(.bottom, 2)
-        .containerBackground(Color.black.gradient, for: .navigation)
-        .onAppear {
-            calculateSuggestions()
-            selectedTemplate = profile.selectedTemplate
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .navigationTitle(page == 0 ? "Next cycle" : "Program")
+        .navigationBarTitleDisplayMode(.inline)
+        .containerBackground(IronTheme.canvas.gradient, for: .navigation)
+        .sheet(isPresented: $showTemplates) {
+            NavigationStack {
+                List {
+                    ForEach(SupplementalTemplate.allCases, id: \.self) { template in
+                        Button {
+                            selectedTemplate = template
+                            showTemplates = false
+                        } label: {
+                            HStack {
+                                Text(template.shortName)
+                                Spacer()
+                                if template == selectedTemplate { Image(systemName: "checkmark").foregroundStyle(IronTheme.mint) }
+                            }
+                        }
+                    }
+                }
+                .navigationTitle("Template")
+            }
         }
+        .sheet(item: $editingLift) { lift in
+            TMEditorSheet(lift: lift, value: suggestion(lift), unit: profile.weightUnit)
+        }
+        .alert("Could not start cycle", isPresented: Binding(
+            get: { saveError != nil }, set: { if !$0 { saveError = nil } }
+        )) { Button("OK") { saveError = nil } } message: { Text(saveError ?? "") }
     }
 
-    private func CompactTMBox(lift: MainLift, old: Double, new: Binding<Double>, unit: WeightUnit) -> some View {
-        VStack(spacing: 2) {
-            HStack(spacing: 3) {
-                Image(systemName: lift.symbolName)
-                    .font(.system(size: 8))
-                    .foregroundColor(lift.color)
-                Text(lift.shortName)
-                    .font(.system(size: 8, weight: .black))
-            }
+    private func loadSuggestions() {
+        guard !loaded else { return }
+        calculateSuggestions()
+        selectedTemplate = profile.selectedTemplate
+        loaded = true
+        page = min(max(initialPage, 0), 1)
+    }
 
-            Text("\(Int(new.wrappedValue))")
-                .font(.system(size: 14, weight: .black, design: .rounded))
-                .frame(maxWidth: .infinity, minHeight: 24)
-                .background(lift.color.opacity(0.15))
-                .cornerRadius(4)
-                .focusable()
-                .digitalCrownRotation(new, from: 0, through: 1000, by: unit.roundTo, sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
+    private func suggestion(_ lift: MainLift) -> Binding<Double> {
+        switch lift {
+        case .squat: return $suggestedSquat
+        case .bench: return $suggestedBench
+        case .deadlift: return $suggestedDeadlift
+        case .ohp: return $suggestedOHP
         }
-        .padding(4)
-        .background(Color.white.opacity(0.05))
-        .cornerRadius(6)
     }
 
     private func calculateSuggestions() {
@@ -153,6 +173,10 @@ struct CycleSummaryView: View {
     }
 
     private func saveAndAdvance() {
+        guard [suggestedSquat, suggestedBench, suggestedDeadlift, suggestedOHP].allSatisfy({ $0 > 0 }) else {
+            saveError = "Enter a positive training max for every lift."
+            return
+        }
         let templateChanged = (profile.selectedTemplate != selectedTemplate)
 
         profile.squatTM = suggestedSquat
@@ -176,7 +200,11 @@ struct CycleSummaryView: View {
         profile.currentWeek = 1
         profile.currentCycle += 1
 
-        try? modelContext.save()
+        do { try modelContext.save() } catch {
+            modelContext.rollback()
+            saveError = "Your cycle was kept. Please try again."
+            return
+        }
         onComplete()
         dismiss()
     }

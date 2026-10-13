@@ -4,6 +4,7 @@ import SwiftData
 struct DashboardView: View {
     @Query private var userProfiles: [UserProfile]
     @Query private var accessories: [AccessoryExercise]
+    @Query(sort: \ActiveWorkoutSession.startTime, order: .reverse) private var activeSessions: [ActiveWorkoutSession]
     @Query(sort: \WorkoutSession.date, order: .reverse) private var workoutSessions: [WorkoutSession]
     @Environment(\.modelContext) private var modelContext
     @Environment(WorkoutManager.self) var workoutManager
@@ -11,6 +12,12 @@ struct DashboardView: View {
     @State private var showOnboarding = false
     @State private var showLiftPicker = false
     @State private var overrideLift: MainLift?
+    @State private var workoutLift: MainLift?
+    @State private var selectedPage = 0
+
+    init(initialPage: Int = 0) {
+        _selectedPage = State(initialValue: initialPage)
+    }
     @State private var showSkipDeloadConfirmation = false
 
     private var workoutSessionService: WorkoutSessionService {
@@ -21,11 +28,11 @@ struct DashboardView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Group {
                 if let profile = userProfiles.first {
-                    let nextLift = overrideLift ?? workoutSessionService.determineNextLift(profile: profile, sessions: workoutSessions)
-                    TabView {
+                    let nextLift = activeSessions.first?.mainLift ?? overrideLift ?? workoutSessionService.determineNextLift(profile: profile, sessions: workoutSessions)
+                    TabView(selection: $selectedPage) {
                         // MARK: Page 1 — Action
                         actionPage(profile: profile, nextLift: nextLift)
                             .tag(0)
@@ -34,13 +41,18 @@ struct DashboardView: View {
                         previewPage(profile: profile, nextLift: nextLift)
                             .tag(1)
                     }
-                    .tabViewStyle(.page)
+                    .tabViewStyle(.page(indexDisplayMode: .automatic))
                 } else {
                     EmptyStateView(showOnboarding: $showOnboarding)
                 }
             }
+            .navigationDestination(item: $workoutLift) { lift in
+                if let profile = userProfiles.first {
+                    WorkoutActiveView(lift: lift, profile: profile, accessories: accessories)
+                }
+            }
         }
-        .containerBackground(Color.black.gradient, for: .navigation)
+        .containerBackground(IronTheme.canvas.gradient, for: .navigation)
         .confirmationDialog("Change Lift", isPresented: $showLiftPicker, titleVisibility: .visible) {
             ForEach(MainLift.allCases, id: \.self) { lift in
                 Button { overrideLift = lift } label: {
@@ -67,6 +79,14 @@ struct DashboardView: View {
         .onChange(of: workoutSessions.count) { _, _ in
             overrideLift = nil
         }
+        .alert("Apple Health Error", isPresented: Binding(
+            get: { workoutManager.workoutError != nil },
+            set: { if !$0 { workoutManager.workoutError = nil } }
+        )) {
+            Button("OK") { workoutManager.workoutError = nil }
+        } message: {
+            Text(workoutManager.workoutError ?? "Please try again.")
+        }
         .alert("Skip Deload?", isPresented: $showSkipDeloadConfirmation) {
             Button("Cancel", role: .cancel) { }
             Button("Skip & Progress") {
@@ -83,57 +103,48 @@ struct DashboardView: View {
 
     @ViewBuilder
     private func actionPage(profile: UserProfile, nextLift: MainLift) -> some View {
-        VStack(spacing: 3) {
-            DashboardHeader(profile: profile)
-
-            WeeklyProgressDots(profile: profile, workoutSessions: workoutSessions, activeLift: nextLift)
-                .padding(.vertical, 1)
-
-            MainGlanceableCard(
-                nextLift: nextLift,
-                profile: profile,
-                showSkipDeloadConfirmation: $showSkipDeloadConfirmation,
-                accessories: accessories
-            )
-
-            Spacer(minLength: 0)
+        GeometryReader { geometry in
+            let compact = geometry.size.height < 185
+            VStack(spacing: compact ? 4 : 6) {
+                DashboardHeader(profile: profile, compact: compact)
+                WeeklyProgressDots(profile: profile, workoutSessions: workoutSessions, activeLift: nextLift)
+                MainGlanceableCard(
+                    nextLift: nextLift, profile: profile,
+                    isResuming: activeSessions.contains { $0.mainLift == nextLift },
+                    compact: compact, onStart: { workoutLift = nextLift }
+                )
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 8)
         }
-        .padding(.horizontal, 8)
-        .padding(.top, 0)
     }
 
     @ViewBuilder
     private func previewPage(profile: UserProfile, nextLift: MainLift) -> some View {
-        VStack(spacing: 4) {
-            // Mini lift header - Simplified now that nav is on Page 1
-            HStack(spacing: 6) {
-                Image(systemName: nextLift.symbolName)
-                    .font(.system(size: 11, weight: .black))
-                    .foregroundStyle(nextLift.color.gradient)
-                Text(nextLift.name.uppercased())
-                    .font(.system(size: 11, weight: .black, design: .rounded))
-                Spacer()
+        GeometryReader { geometry in
+            let compact = geometry.size.height < 185
+            VStack(spacing: compact ? 4 : 6) {
+                HStack {
+                    IronEyebrow(text: "Today's plan", color: nextLift.color)
+                    Spacer(minLength: 0)
+                    if profile.currentWeek == 4 {
+                        Button { showSkipDeloadConfirmation = true } label: {
+                            Image(systemName: "forward.end").frame(width: 30, height: 24)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(!activeSessions.isEmpty)
+                        .accessibilityLabel("Skip deload week")
+                    }
+                }
+                WorkoutPreviewCard(profile: profile, nextLift: nextLift, accessories: accessories, compact: compact)
+                QuickStatsView(profile: profile, nextLift: nextLift, workoutSessions: workoutSessions,
+                               showLiftPicker: $showLiftPicker, compact: compact, canChangeLift: activeSessions.isEmpty)
+                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 4)
-
-            WorkoutPreviewCard(
-                profile: profile,
-                nextLift: nextLift,
-                accessories: accessories
-            )
-
-            QuickStatsView(
-                profile: profile,
-                nextLift: nextLift,
-                workoutSessions: workoutSessions,
-                showLiftPicker: $showLiftPicker
-            )
-
-            Spacer(minLength: 0)
+            .padding(.horizontal, 8)
         }
-        .padding(.horizontal, 10)
-        .padding(.top, 6)
     }
+
 }
 
 #Preview {

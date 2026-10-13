@@ -6,6 +6,9 @@ struct WorkoutActiveView: View {
     let lift: MainLift
     let profile: UserProfile
     let accessories: [AccessoryExercise]
+    var initialStepIndex: Int?
+    var initialStepCompleted: Bool?
+    var initialDialog: String?
 
     @Environment(\.modelContext) var modelContext
     @Environment(WorkoutManager.self) var workoutManager
@@ -19,13 +22,18 @@ struct WorkoutActiveView: View {
     @State var showRestTimer = false
     @State var restTimeRemaining = 90
     @State var timer: Timer?
-    @State var lastTimerTick: Date = Date()
+    @State var restCountdown = RestCountdown()
+    @State var didSetupWorkout = false
+    @State var didFinishWorkout = false
+    @State var workoutError: String?
+    @Environment(\.scenePhase) var scenePhase
 
     // Plate Calculator State
     @State var selectedWeightForCalc: Double?
 
     // Finish State
     @State var showFinishConfirmation = false
+    @State var showWorkoutActions = false
     @State var showCelebration = false
     @State var showCycleSummary = false
     @State var finalAmrapReps = 0
@@ -38,87 +46,83 @@ struct WorkoutActiveView: View {
     @Environment(\.isLuminanceReduced) var isLuminanceReduced
 
     var body: some View {
-        VStack(spacing: 0) {
-            if selectedTab < steps.count {
-                headerView()
-            }
-
-            contentView()
-            .tabViewStyle(.page(indexDisplayMode: .never))
-
-            if selectedTab < steps.count && !isLuminanceReduced {
-                // Real-time Stats Footer - Hidden on Summary Tab to avoid redundancy
-                HStack {
-                    HStack(spacing: 4) {
-                        ZStack {
-                            Circle()
-                                .stroke(heartRateColor(for: workoutManager.heartRate), lineWidth: 1.2)
-                                .frame(width: 14, height: 14)
-                            Image(systemName: "heart.fill")
-                                .foregroundColor(heartRateColor(for: workoutManager.heartRate))
-                                .font(.system(size: 7))
-                        }
-                        Text(workoutManager.heartRate > 0 ? "\(Int(workoutManager.heartRate))" : "—")
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                        Text("BPM")
-                            .font(.system(size: 7, weight: .bold))
-                            .foregroundColor(.secondary)
-                    }
-
-                    Spacer()
-
-                    HStack(spacing: 4) {
-                        Image(systemName: "timer")
-                            .foregroundColor(.purple)
-                            .font(.system(size: 10))
-                        Text(workoutManager.elapsedTimeString)
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
+        contentView()
+        .containerBackground(IronTheme.canvas.gradient, for: .navigation)
+        .onAppear {
+            if !didSetupWorkout {
+                setupWorkout()
+                if let index = initialStepIndex {
+                    selectedTab = min(max(0, index), steps.count)
+                    if let completed = initialStepCompleted, steps.indices.contains(selectedTab) {
+                        steps[selectedTab].workoutSet.isCompleted = completed
                     }
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 2)
-                .background(Color.black.opacity(0.3))
+                showWorkoutActions = initialDialog == "actions"
+                showFinishConfirmation = initialDialog == "finish"
+                didSetupWorkout = true
             }
-        }
-        .containerBackground(lift.color.gradient, for: .navigation)
-        .onAppear {
-            setupWorkout()
-            workoutManager.startWorkout()
-            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+            if !steps.isEmpty && !didFinishWorkout {
+                workoutManager.startOrResumeWorkout()
+                resumeRestTimer()
+            }
+            if !DesignPreview.isEnabled {
+                UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+            }
         }
         .onDisappear {
             timer?.invalidate()
             timer = nil
-            UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+            saveActiveSession()
+        }
+        .onChange(of: selectedTab) { _, _ in saveActiveSession() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { resumeRestTimer() }
         }
         .overlay {
             if showRestTimer {
-                RestTimerView(timeRemaining: $restTimeRemaining, isPresented: $showRestTimer, liftColor: lift.color) {
-                    advanceTab()
-                }
+                RestTimerView(
+                    timeRemaining: restTimeRemaining,
+                    liftColor: lift.color,
+                    nextSet: nextRestSet,
+                    onAdjust: adjustRestTimer,
+                    onSkip: completeRestTimer
+                )
             }
-            if showPhaseTransition {
-                ZStack {
-                    Color.black.opacity(0.85).ignoresSafeArea()
-                    VStack {
-                        Text("UP NEXT")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.secondary)
-                        Text(currentPhaseTitle.uppercased())
-                            .font(.system(size: 24, weight: .black, design: .rounded))
-                            .foregroundColor(lift.color)
-                    }
+            if showPhaseTransition && !showRestTimer {
+                VStack {
+                    IronEyebrow(text: "\(currentPhaseTitle) ready", color: lift.color)
+                        .padding(8)
+                        .background(.black.opacity(0.9), in: Capsule())
+                    Spacer()
                 }
-                .transition(.opacity)
+                .allowsHitTesting(false)
             }
         }
+
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button(action: { showFinishConfirmation = true }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.white.opacity(0.6))
+                Button { showWorkoutActions = true } label: {
+                    Image(systemName: "ellipsis")
+                }
+                .accessibilityLabel("Workout actions")
+            }
+        }
+        .confirmationDialog("Workout actions", isPresented: $showWorkoutActions, titleVisibility: .visible) {
+            Button("Finish & save") { showFinishConfirmation = true }
+            Button("Pause & exit") {
+                saveActiveSession()
+                workoutManager.pauseWorkout()
+                dismiss()
+            }
+            .disabled(workoutManager.isPreparing)
+            if steps.indices.contains(selectedTab) && steps[selectedTab].workoutSet.isCompleted {
+                Button("Undo current set") {
+                    stopRestTimer()
+                    steps[selectedTab].workoutSet.isCompleted = false
+                    saveActiveSession()
                 }
             }
+            Button("Keep training", role: .cancel) { }
         }
         .sheet(item: Binding(
             get: { selectedWeightForCalc.map { WeightIdentifiable(weight: $0) } },
@@ -139,18 +143,27 @@ struct WorkoutActiveView: View {
                 )
             }
         }
+        .alert("Workout Error", isPresented: Binding(
+            get: { workoutError != nil || workoutManager.workoutError != nil },
+            set: { if !$0 { workoutError = nil; workoutManager.workoutError = nil } }
+        )) {
+            Button("OK") { workoutError = nil; workoutManager.workoutError = nil }
+        } message: {
+            Text(workoutError ?? workoutManager.workoutError ?? "Please try again.")
+        }
         .animation(.spring(), value: showRestTimer)
-        .alert("Finish Workout?", isPresented: $showFinishConfirmation) {
+        .navigationTitle(lift.shortName)
+        .alert("Save workout?", isPresented: $showFinishConfirmation) {
             Button("Cancel", role: .cancel) { }
             Button("Save & Exit") {
                 triggerCelebration()
             }
         } message: {
-            Text("Your session will be saved.")
+            Text(completedStepsCount() == steps.count ? "Your completed workout will be added to history." : "Save logged sets? Your training week will not advance.")
         }
     }
 
-    private func heartRateColor(for rate: Double) -> Color {
+    func heartRateColor(for rate: Double) -> Color {
         guard rate > 0 else { return .secondary }
         let maxHR = Double(220 - profile.age)
         let percent = rate / maxHR

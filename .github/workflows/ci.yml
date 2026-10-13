@@ -21,6 +21,9 @@ jobs:
           brew install xcodegen swiftlint xcbeautify
           xcodegen generate
 
+      - name: Test Workout Flow
+        run: swift test
+
       - name: Run SwiftLint
         run: swiftlint lint --reporter github-actions-logging
 

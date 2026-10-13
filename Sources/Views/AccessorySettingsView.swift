@@ -8,6 +8,7 @@ struct AccessorySettingsView: View {
 
     @State private var showingAddSheet = false
     @State private var editingAccessory: AccessoryExercise?
+    @State private var saveError: String?
     @State private var showClearConfirmation = false
 
     private var weightUnit: WeightUnit {
@@ -19,11 +20,11 @@ struct AccessorySettingsView: View {
             if accessories.isEmpty {
                 Section {
                     VStack(spacing: 8) {
-                        Text("No accessories found.")
+                        Text("No assistance exercises.")
                             .font(.caption)
                             .foregroundColor(.secondary)
 
-                        Button("Load Template Defaults") {
+                        Button("Load template defaults") {
                             loadDefaults()
                         }
                         .buttonStyle(.bordered)
@@ -49,9 +50,9 @@ struct AccessorySettingsView: View {
                             Button(action: { editingAccessory = accessory }) {
                                 HStack {
                                     VStack(alignment: .leading) {
-                                        Text(accessory.name).fontWeight(.bold)
-                                        Text("\(accessory.targetSets) Sets × \(accessory.targetReps) @ \(String(format: "%.1f", accessory.weight)) \(weightUnit.label)")
-                                            .font(.caption)
+                                        Text(accessory.name).font(.system(size: 15, weight: .semibold, design: .rounded))
+                                        Text("\(accessory.targetSets) × \(accessory.targetReps) · \(accessory.weight == 0 ? "No added weight" : IronTheme.weight(accessory.weight) + " " + weightUnit.label)")
+                                            .font(.system(size: 11))
                                             .foregroundColor(.secondary)
                                     }
                                     Spacer()
@@ -73,7 +74,7 @@ struct AccessorySettingsView: View {
                 Button(action: { showingAddSheet.toggle() }) {
                     HStack {
                         Image(systemName: "plus.circle.fill")
-                        Text("Add Accessory")
+                        Text("Add exercise")
                     }
                     .foregroundColor(.accentColor)
                 }
@@ -82,12 +83,13 @@ struct AccessorySettingsView: View {
                     Button(role: .destructive, action: {
                         showClearConfirmation = true
                     }) {
-                        Text("Clear All")
+                        Text("Clear all")
                     }
                 }
             }
         }
-        .navigationTitle("Accessories")
+        .navigationTitle("Assistance")
+        .containerBackground(IronTheme.canvas.gradient, for: .navigation)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button(action: { showingAddSheet.toggle() }) {
@@ -95,11 +97,9 @@ struct AccessorySettingsView: View {
                 }
             }
         }
-        .onAppear {
-            if accessories.isEmpty {
-                loadDefaults()
-            }
-        }
+        .alert("Could not save assistance", isPresented: Binding(
+            get: { saveError != nil }, set: { if !$0 { saveError = nil } }
+        )) { Button("OK") { saveError = nil } } message: { Text(saveError ?? "") }
         .sheet(isPresented: $showingAddSheet) {
             AddAccessoryView()
         }
@@ -107,13 +107,20 @@ struct AccessorySettingsView: View {
             AddAccessoryView(editingAccessory: accessory)
         }
         .confirmationDialog("Clear all accessories?", isPresented: $showClearConfirmation, titleVisibility: .visible) {
-            Button("Clear All", role: .destructive) {
+            Button("Clear all", role: .destructive) {
                 for acc in accessories { modelContext.delete(acc) }
-                try? modelContext.save()
+                saveChanges()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This cannot be undone.")
+        }
+    }
+
+    private func saveChanges() {
+        do { try modelContext.save() } catch {
+            modelContext.rollback()
+            saveError = "Your previous exercises were kept. Please try again."
         }
     }
 
@@ -125,7 +132,7 @@ struct AccessorySettingsView: View {
                 modelContext.insert(acc)
             }
         }
-        try? modelContext.save()
+        saveChanges()
     }
 
     private func deleteAccessories(at offsets: IndexSet, from list: [AccessoryExercise]) {
@@ -133,7 +140,7 @@ struct AccessorySettingsView: View {
             let accessory = list[index]
             modelContext.delete(accessory)
         }
-        try? modelContext.save()
+        saveChanges()
     }
 }
 

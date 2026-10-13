@@ -1,108 +1,52 @@
 import SwiftUI
-import SwiftData
 
 struct PlateCalculatorView: View {
     let targetWeight: Double
     var unit: WeightUnit = .lbs
-    @Environment(\.dismiss) var dismiss
-
-    var platesNeeded: [(weight: Double, count: Int)] {
+    private var plates: [(weight: Double, count: Int)] {
         WorkoutCalculator.platesNeeded(for: targetWeight, unit: unit)
     }
 
     var body: some View {
-        VStack(spacing: 12) {
-            Text("PLATE MATH")
-                .font(.system(.headline, design: .rounded, weight: .black))
-                .padding(.top)
-
-            VStack(spacing: 2) {
-                Text("\(String(format: "%.1f", targetWeight)) \(unit.label)")
-                    .font(.system(size: 20, weight: .black, design: .rounded))
-                    .foregroundStyle(.tint)
-                Text("(per side, \(String(format: "%.0f", unit.barWeight))\(unit.label) bar)")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundColor(.secondary)
-            }
-
-            if targetWeight <= unit.barWeight {
-                Text("Bar only")
-                    .font(.system(.body, design: .rounded, weight: .semibold))
-                    .foregroundColor(.secondary)
-                    .italic()
-                    .padding()
-            } else {
-                ScrollView {
-                    VStack(spacing: 6) {
-                        ForEach(platesNeeded, id: \.weight) { plate in
+        ScrollView {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("\(IronTheme.weight(targetWeight)) \(unit.label)")
+                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                    .foregroundStyle(IronTheme.ember)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                Text("\(IronTheme.weight(unit.barWeight)) \(unit.label) bar · plates on each side")
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                if targetWeight < unit.barWeight {
+                    Text("Use a lighter bar for this target.")
+                        .font(.system(size: 13))
+                } else if plates.isEmpty {
+                    Label("Bar only", systemImage: "checkmark.circle")
+                        .foregroundStyle(IronTheme.mint)
+                } else {
+                    VStack(spacing: 3) {
+                        ForEach(plates, id: \.weight) { plate in
                             HStack(spacing: 8) {
-                                Circle()
-                                    .stroke(plateColor(plate.weight), lineWidth: 3)
-                                    .frame(width: 20, height: 20)
-                                    .overlay(
-                                        Text(plate.weight == 1.25 ? "1.2" : "\(Int(plate.weight))")
-                                            .font(.system(size: 9, weight: .black))
-                                    )
-
-                                Text("\(String(format: "%.1f", plate.weight)) \(unit.label)")
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
-
-                                Spacer()
-
-                                Text("\(plate.count)")
-                                    .font(.system(size: 20, weight: .black, design: .rounded))
-                                    .foregroundColor(plateColor(plate.weight))
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(PlateColor.color(plate.weight, unit: unit))
+                                    .frame(width: 5, height: 20)
+                                Text("\(IronTheme.weight(plate.weight)) \(unit.label)")
+                                Spacer(minLength: 0)
+                                Text("×\(plate.count)").fontWeight(.semibold)
                             }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.05)))
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 5)
+                            .background(IronTheme.surface, in: RoundedRectangle(cornerRadius: 10))
+                            .accessibilityElement(children: .combine)
                         }
                     }
                 }
             }
-
-            Button("CLOSE") {
-                dismiss()
-            }
-            .font(.system(size: 14, weight: .black, design: .rounded))
-            .buttonStyle(.borderedProminent)
-            .tint(.orange)
-            .padding(.bottom)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
         }
-        .padding()
-        .containerBackground(.black.gradient, for: .navigation)
+        .navigationTitle("Load the bar")
+        .navigationBarTitleDisplayMode(.inline)
+        .containerBackground(IronTheme.canvas.gradient, for: .navigation)
     }
-
-    private func plateColor(_ weight: Double) -> Color {
-        unit == .kg ? kgPlateColor(weight) : lbsPlateColor(weight)
-    }
-
-    private func kgPlateColor(_ weight: Double) -> Color {
-        switch weight {
-        case 25: return .red
-        case 20: return .blue
-        case 15: return .yellow
-        case 10: return .green
-        case 5: return .white
-        case 2.5: return .orange
-        case 1.25: return .gray
-        default: return .gray
-        }
-    }
-
-    private func lbsPlateColor(_ weight: Double) -> Color {
-        switch weight {
-        case 45: return .blue
-        case 25: return .yellow
-        case 10: return .white
-        case 5: return .red
-        case 2.5: return .green
-        default: return .gray
-        }
-    }
-}
-
-#Preview {
-    PlateCalculatorView(targetWeight: 225, unit: .lbs)
 }

@@ -81,9 +81,13 @@ pre-commit run --all-files
 ## ⚠️ Known Gotchas & Pitfalls
 
 - **`WorkoutStepView`**: Calculates PR "Reps to Beat" internally using `workoutSessions`. Do **not** pass `prRepsToBeat` as an initializer parameter.
-- **`WorkoutSet`**: The `completedReps` property is a computed property in `Sources/Models/WorkoutCalculator.swift`. Do not redefine it.
+- **`WorkoutSet`**: The `completedReps` property is a computed property in `Sources/Support/WorkoutSet.swift`. Do not redefine it.
 - **Backgrounding**: HealthKit sessions must be managed carefully to prevent the app from being suspended during a workout.
-- **`WorkoutStep`**: Defined in `Sources/Views/WorkoutStepView.swift`.
+- **`WorkoutStep`**: Defined in `Sources/Support/WorkoutStep.swift`.
+- **Workout recovery**: `WorkoutAppDelegate` and the active view share `WorkoutManager.shared`. Recover the HealthKit session before creating a replacement; repeated appearances must not start duplicate sessions.
+- **Rest timing**: Persist `RestCountdown` inside `WorkoutProgress`. Skip and expiry consume the same countdown once. Update the scheduled notification after time adjustments.
+- **Persistence compatibility**: `WorkoutProgress.decode` must continue reading the legacy `[WorkoutStep]` JSON format. Never replace unreadable saved progress with an empty workout.
+- **Logic tests**: Run `swift test` for the Foundation-only workout progress and countdown regression suite.
 
 ## 🔄 Self-Evolution
 

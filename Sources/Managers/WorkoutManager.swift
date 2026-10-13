@@ -6,6 +6,14 @@ import SwiftUI
 
 @Observable
 class WorkoutManager: NSObject {
+    static let shared = WorkoutManager()
+    var workoutError: String?
+    var isPreparing: Bool { isStarting || isRecovering || isEnding }
+    private var isStarting = false
+    private var isRecovering = false
+    private var isEnding = false
+    private var startAfterRecovery = false
+    private var startAfterEnding = false
     let healthStore = HKHealthStore()
     var session: HKWorkoutSession?
     var builder: HKLiveWorkoutBuilder?
@@ -19,6 +27,7 @@ class WorkoutManager: NSObject {
     let logger = Logger(subsystem: "com.antigravity.IronFive", category: "WorkoutManager")
 
     func requestAuthorization() {
+        guard !DesignPreview.isEnabled else { return }
         let typesToShare: Set = [HKQuantityType.workoutType()]
         let optionalTypes = [
             HKQuantityType.quantityType(forIdentifier: .heartRate),
@@ -35,7 +44,63 @@ class WorkoutManager: NSObject {
         }
     }
 
-    func startWorkout() {
+    func startOrResumeWorkout() {
+        if DesignPreview.isEnabled { running = true; return }
+        guard !isEnding else { startAfterEnding = true; return }
+        if let session = session {
+            if session.state == .paused { session.resume() }
+            return
+        }
+        if isStarting { return }
+        recoverWorkout(startIfUnavailable: true)
+    }
+
+    func recoverWorkout(startIfUnavailable: Bool = false) {
+        guard !DesignPreview.isEnabled else { return }
+        guard session == nil, !isStarting, !isEnding else { return }
+        startAfterRecovery = startAfterRecovery || startIfUnavailable
+        guard !isRecovering else { return }
+        isRecovering = true
+        healthStore.recoverActiveWorkoutSession { recoveredSession, error in
+            DispatchQueue.main.async {
+                self.isRecovering = false
+                let shouldStart = self.startAfterRecovery
+                self.startAfterRecovery = false
+                if let recoveredSession = recoveredSession {
+                    self.attachRecoveredSession(recoveredSession)
+                    if shouldStart && recoveredSession.state == .paused { recoveredSession.resume() }
+                } else if let error = error {
+                    self.workoutError = "Could not recover Apple Health workout: \(error.localizedDescription)"
+                } else if shouldStart {
+                    self.startWorkout()
+                }
+            }
+        }
+    }
+
+    private func attachRecoveredSession(_ recoveredSession: HKWorkoutSession) {
+        session = recoveredSession
+        builder = recoveredSession.associatedWorkoutBuilder()
+        recoveredSession.delegate = self
+        builder?.delegate = self
+        if builder?.dataSource == nil {
+            builder?.dataSource = HKLiveWorkoutDataSource(
+                healthStore: healthStore, workoutConfiguration: recoveredSession.workoutConfiguration
+            )
+        }
+        running = recoveredSession.state == .running
+        updateHeartRate()
+        updateActiveEnergy()
+        updateElapsedTime()
+        startTimer()
+    }
+
+    private func startWorkout() {
+        guard session == nil, !isStarting, !isEnding else { return }
+        isStarting = true
+        heartRate = 0
+        activeEnergy = 0
+        elapsedTimeString = "00:00"
         let configuration = HKWorkoutConfiguration()
         configuration.activityType = .traditionalStrengthTraining
         configuration.locationType = .indoor
@@ -51,42 +116,81 @@ class WorkoutManager: NSObject {
             let startDate = Date()
             session?.startActivity(with: startDate)
             builder?.beginCollection(withStart: startDate) { success, error in
-                if success {
-                    DispatchQueue.main.async {
+                DispatchQueue.main.async {
+                    self.isStarting = false
+                    if success {
                         self.running = true
                         self.startTimer()
+                    } else {
+                        self.session?.end()
+                        self.session = nil
+                        self.builder = nil
+                        self.workoutError = "Could not start Apple Health workout: \(error?.localizedDescription ?? "Unknown error")"
                     }
                 }
             }
         } catch {
+            isStarting = false
+            workoutError = "Could not start Apple Health workout: \(error.localizedDescription)"
             logger.error("Failed to start workout session: \(error.localizedDescription)")
         }
     }
 
+    private func updateElapsedTime() {
+        guard let builder = builder else { return }
+        let elapsed = Int(builder.elapsedTime)
+        elapsedTimeString = String(format: "%02d:%02d", elapsed / 60, elapsed % 60)
+    }
+
     private func startTimer() {
+        timer?.invalidate()
+        updateElapsedTime()
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self = self, let builder = self.builder else { return }
-            let elapsed = builder.elapsedTime
-            let minutes = Int(elapsed) / 60
-            let seconds = Int(elapsed) % 60
-            DispatchQueue.main.async {
-                self.elapsedTimeString = String(format: "%02d:%02d", minutes, seconds)
+            self?.updateElapsedTime()
+        }
+    }
+
+    func pauseWorkout() {
+        if DesignPreview.isEnabled { running = false; return }
+        timer?.invalidate()
+        timer = nil
+        session?.pause()
+    }
+
+    func endWorkout() {
+        if DesignPreview.isEnabled { running = false; return }
+        guard !isEnding, let endingSession = session, let endingBuilder = builder else { return }
+        isEnding = true
+        timer?.invalidate()
+        timer = nil
+        endingSession.end()
+        endingBuilder.endCollection(withEnd: Date()) { success, error in
+            guard success else {
+                self.completeEnding(error: error)
+                return
+            }
+            endingBuilder.finishWorkout { _, error in
+                self.completeEnding(error: error)
             }
         }
     }
 
-    func endWorkout() {
-        timer?.invalidate()
-        timer = nil
-        session?.end()
-        builder?.endCollection(withEnd: Date()) { success, error in
-            self.builder?.finishWorkout { workout, error in
-                DispatchQueue.main.async {
-                    self.running = false
-                }
+    private func completeEnding(error: Error?) {
+        DispatchQueue.main.async {
+            self.running = false
+            self.isEnding = false
+            self.session = nil
+            self.builder = nil
+            if let error = error {
+                self.workoutError = "Could not save Apple Health workout: \(error.localizedDescription)"
+            }
+            if self.startAfterEnding {
+                self.startAfterEnding = false
+                self.startOrResumeWorkout()
             }
         }
     }
+
 }
 
 // MARK: - HKWorkoutSessionDelegate
@@ -99,12 +203,23 @@ extension WorkoutManager: HKWorkoutSessionDelegate {
     ) {
         // Handle state changes if necessary
         DispatchQueue.main.async {
+            guard self.session === workoutSession else { return }
             self.running = (toState == .running)
+            if self.running {
+                self.startTimer()
+            } else if toState == .paused {
+                self.timer?.invalidate()
+                self.timer = nil
+            }
         }
     }
 
     func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: Error) {
         logger.error("Workout session failed: \(error.localizedDescription)")
+        DispatchQueue.main.async {
+            guard self.session === workoutSession else { return }
+            self.workoutError = "Apple Health workout failed: \(error.localizedDescription)"
+        }
     }
 }
 
